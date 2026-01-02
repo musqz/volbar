@@ -1,0 +1,36 @@
+
+/* Volnotify Default Theme */
+
+#volnotify-window {
+    background-color: #2b303b;
+    border: 2px solid #4f5b66;
+    border-radius: 8px;
+}
+
+#volnotify-window label {
+    color: #c0c5ce;
+}
+
+label.icon {
+    color: #c0c5ce;
+}
+
+label.icon.muted {
+    color: #bf616a;
+}
+
+label.slider {
+    color: #8fa1b3;
+}
+
+label.slider.muted {
+    color: #bf616a;
+}
+
+label.percentage {
+    color: #c0c5ce;
+}
+
+label.percentage.muted {
+    color: #bf616a;
+}
