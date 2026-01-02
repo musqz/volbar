@@ -1,6 +1,6 @@
 /* Cyberpunk Theme - Neon Pink & Cyan */
 
-#volnotify-window {
+#volbar-window {
     background-color: #0a0e27;
     background-image: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
     border: 2px solid #ff00ff;
@@ -8,7 +8,7 @@
     box-shadow: 0 0 20px rgba(255, 0, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1);
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #00ffff;
     text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
 }

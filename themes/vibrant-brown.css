@@ -1,6 +1,6 @@
 /* Vibrant Brown Theme - Warm Earth Tones */
 
-#volnotify-window {
+#volbar-window {
     background-color: #1c1410;
     background-image: linear-gradient(135deg, #1c1410 0%, #2d2116 100%);
     border: 3px solid #a1887f;
@@ -8,7 +8,7 @@
     box-shadow: 0 4px 20px rgba(161, 136, 127, 0.4);
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #efebe9;
 }
 

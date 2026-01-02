@@ -1,6 +1,6 @@
 /* Vibrant Orange Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #1a0f00;
     background-image: linear-gradient(135deg, #1a0f00 0%, #2d1a00 100%);
     border: 3px solid #ff9800;
@@ -8,7 +8,7 @@
     box-shadow: 0 4px 20px rgba(255, 152, 0, 0.5);
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #fff3e0;
 }
 

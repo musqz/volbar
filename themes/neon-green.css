@@ -1,6 +1,6 @@
 /* Neon Green Theme - Matrix Style */
 
-#volnotify-window {
+#volbar-window {
     background-color: #0d0208;
     background-image: linear-gradient(135deg, #0d0208 0%, #1a1310 100%);
     border: 2px solid #00ff41;
@@ -8,7 +8,7 @@
     box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #00ff41;
     text-shadow: 0 0 10px rgba(0, 255, 65, 0.7);
 }

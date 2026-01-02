@@ -1,12 +1,12 @@
 /* Catppuccin Mocha Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #1e1e2e;
     border: 2px solid #45475a;
     border-radius: 10px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #cdd6f4;
 }
 
