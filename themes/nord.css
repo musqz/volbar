@@ -1,12 +1,12 @@
 /* Nord Theme - Cool Arctic Colors */
 
-#volnotify-window {
+#volbar-window {
     background-color: #2e3440;
     border: 2px solid #4c566a;
     border-radius: 8px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #eceff4;
 }
 

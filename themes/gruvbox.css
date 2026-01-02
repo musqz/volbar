@@ -1,12 +1,12 @@
 /* Gruvbox Dark Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #282828;
     border: 3px solid #504945;
     border-radius: 5px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #ebdbb2;
 }
 

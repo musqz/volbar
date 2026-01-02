@@ -1,13 +1,13 @@
 
-/* Volnotify Default Theme */
+/* volbar Default Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #2b303b;
     border: 2px solid #4f5b66;
     border-radius: 8px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #c0c5ce;
 }
 

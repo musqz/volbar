@@ -1,12 +1,12 @@
 /* Solarized Dark Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #002b36;
     border: 2px solid #073642;
     border-radius: 8px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #839496;
 }
 

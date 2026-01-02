@@ -1,13 +1,13 @@
 /* Tokyo Night Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #1a1b26;
     border: 2px solid #414868;
     border-radius: 10px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #c0caf5;
 }
 

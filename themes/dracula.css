@@ -1,12 +1,12 @@
 /* Dracula Theme */
 
-#volnotify-window {
+#volbar-window {
     background-color: #282a36;
     border: 2px solid #6272a4;
     border-radius: 8px;
 }
 
-#volnotify-window label {
+#volbar-window label {
     color: #f8f8f2;
 }
 
