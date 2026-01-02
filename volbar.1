@@ -1,0 +1,105 @@
+.TH VOLBAR 1 "2024" "Volbar 1.0.0" "User Commands"
+.SH NAME
+volbar \- simple volume bar for X11 desktops
+.SH SYNOPSIS
+.B volbar
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+Volbar is a simple, lightweight volume bar popup for X11 desktops. It displays volume changes with customizable themes, sizes, positions, and slider styles.
+.SH OPTIONS
+.TP
+.BR \-\-size " \fISIZE\fR"
+Window size: small, medium, or large (default: medium)
+.TP
+.BR \-\-placement " \fIPOS\fR"
+Position: center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right (default: center)
+.TP
+.BR \-\-icon " on|off"
+Show volume icon (default: on)
+.TP
+.BR \-\-percent " on|off"
+Show percentage (default: on)
+.TP
+.BR \-\-slider " \fITYPE\fR"
+Slider style: blocks, bar, dots, line, equals, hash, pipe, star, circle, diamond, triangle, arrow, square, bracket, paren, bar-simple (default: blocks)
+.TP
+.BR \-\-theme " \fINAME\fR"
+Theme name from ~/.themes/volbar/ (default: default)
+.TP
+.BR \-\-corner\-radius " \fINUM\fR"
+Corner radius in pixels (default: 8)
+.TP
+.BR \-\-timeout " \fIMS\fR"
+Display timeout in milliseconds (default: 2000)
+.TP
+.BR \-\-start\-daemon
+Start background monitoring daemon
+.TP
+.BR \-\-stop\-daemon
+Stop running daemon
+.TP
+.BR \-\-list\-themes
+List available themes
+.TP
+.BR \-\-list\-sliders
+List available slider styles
+.TP
+.BR \-\-test\-themes
+Preview all themes with current volume
+.TP
+.BR \-\-show
+Show volume once and exit (default mode)
+.TP
+.BR \-h ", " \-\-help
+Display help message
+.TP
+.BR \-v ", " \-\-version
+Display version information
+.SH EXAMPLES
+.TP
+Show volume bar:
+.B volbar \-\-show
+.TP
+Show with custom theme and placement:
+.B volbar \-\-show \-\-placement top-right \-\-theme cyberpunk
+.TP
+Show with custom slider style:
+.B volbar \-\-show \-\-slider line
+.TP
+Start daemon mode:
+.B volbar \-\-start\-daemon \-\-placement top-right
+.TP
+List available sliders:
+.B volbar \-\-list\-sliders
+.TP
+Stop daemon:
+.B volbar \-\-stop\-daemon
+.SH THEMES
+Themes are stored in
+.IR ~/.themes/volbar/ .
+The default theme is automatically created on first run.
+.SH FILES
+.TP
+.I ~/.themes/volbar/
+User theme directory
+.TP
+.I ~/.cache/volbar.pid
+Daemon PID file
+.SH AUDIO BACKENDS
+Volbar auto-detects audio backends in this order:
+.IP 1. 3
+PipeWire (wpctl)
+.IP 2. 3
+PulseAudio (pactl)
+.IP 3. 3
+ALSA (amixer)
+.SH AUTHOR
+Written, with assistance of AI, by musqz <https://github.com/musqz>
+.SH REPORTING BUGS
+Report bugs to: <https://github.com/musqz/volbar/issues>
+.SH COPYRIGHT
+This is free software; do whatever you want with it.
+.SH SEE ALSO
+.BR pactl (1),
+.BR wpctl (1),
+.BR amixer (1)

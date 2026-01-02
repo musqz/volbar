@@ -1,0 +1,35 @@
+/* Catppuccin Mocha Theme */
+
+#volnotify-window {
+    background-color: #1e1e2e;
+    border: 2px solid #45475a;
+    border-radius: 10px;
+}
+
+#volnotify-window label {
+    color: #cdd6f4;
+}
+
+label.icon {
+    color: #cdd6f4;
+}
+
+label.icon.muted {
+    color: #f38ba8;
+}
+
+label.slider {
+    color: #89b4fa;
+}
+
+label.slider.muted {
+    color: #f38ba8;
+}
+
+label.percentage {
+    color: #cdd6f4;
+}
+
+label.percentage.muted {
+    color: #f38ba8;
+}

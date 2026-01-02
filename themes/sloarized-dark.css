@@ -1,0 +1,36 @@
+/* Solarized Dark Theme */
+
+#volnotify-window {
+    background-color: #002b36;
+    border: 2px solid #073642;
+    border-radius: 8px;
+}
+
+#volnotify-window label {
+    color: #839496;
+}
+
+label.icon {
+    color: #268bd2;
+}
+
+label.icon.muted {
+    color: #dc322f;
+}
+
+label.slider {
+    color: #2aa198;
+}
+
+label.slider.muted {
+    color: #dc322f;
+}
+
+label.percentage {
+    color: #93a1a1;
+    font-weight: bold;
+}
+
+label.percentage.muted {
+    color: #dc322f;
+}

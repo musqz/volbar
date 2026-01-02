@@ -1,0 +1,759 @@
+#!/usr/bin/env python3
+"""
+Volbar - Simple volume bar for X11
+"""
+
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, Gdk, GLib
+import subprocess
+import sys
+import os
+import signal
+import re
+from pathlib import Path
+
+
+VERSION = "1.0.0"
+
+
+# ============================================================================
+# PID FILE MANAGEMENT
+# ============================================================================
+
+PID_FILE = Path.home() / '.cache' / 'volbar.pid'
+
+
+def create_pid_file():
+    """Create PID file for daemon"""
+    PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PID_FILE.write_text(str(os.getpid()))
+
+
+def remove_pid_file():
+    """Remove PID file"""
+    if PID_FILE.exists():
+        PID_FILE.unlink()
+
+
+def check_daemon_running():
+    """Check if daemon is already running"""
+    if PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            os.kill(pid, 0)
+            return pid
+        except (ProcessLookupError, ValueError):
+            PID_FILE.unlink()
+            return None
+    return None
+
+
+def stop_daemon():
+    """Stop running daemon"""
+    if PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            print(f"✓ Stopped volbar daemon (PID: {pid})")
+            PID_FILE.unlink()
+            return True
+        except (ProcessLookupError, ValueError):
+            PID_FILE.unlink()
+            print("✗ No daemon running (stale PID file removed)")
+            return False
+    else:
+        print("✗ No daemon running")
+        return False
+
+
+# ============================================================================
+# PRESETS
+# ============================================================================
+
+SIZES = {
+    'small':  {'width': 200, 'height': 40, 'font': '12'},
+    'medium': {'width': 300, 'height': 60, 'font': '14'},
+    'large':  {'width': 400, 'height': 80, 'font': '16'}
+}
+
+PLACEMENTS = {
+    'center': lambda w, h, gw, gh: ((gw - w) // 2, (gh - h) // 2),
+    'top': lambda w, h, gw, gh: ((gw - w) // 2, 50),
+    'bottom': lambda w, h, gw, gh: ((gw - w) // 2, gh - h - 50),
+    'left': lambda w, h, gw, gh: (50, (gh - h) // 2),
+    'right': lambda w, h, gw, gh: (gw - w - 50, (gh - h) // 2),
+    'top-left': lambda w, h, gw, gh: (50, 50),
+    'top-right': lambda w, h, gw, gh: (gw - w - 50, 50),
+    'bottom-left': lambda w, h, gw, gh: (50, gh - h - 50),
+    'bottom-right': lambda w, h, gw, gh: (gw - w - 50, gh - h - 50),
+}
+
+SLIDERS = {
+    'blocks': lambda n: '█' * n + '░' * (10 - n),
+    'bar': lambda n: '■' * n + '□' * (10 - n),
+    'dots': lambda n: '●' * n + '○' * (10 - n),
+    'line': lambda n: '━' * n + '─' * (10 - n),
+    'equals': lambda n: '=' * n + '-' * (10 - n),
+    'hash': lambda n: '#' * n + '·' * (10 - n),
+    'pipe': lambda n: '|' * n + ' ' * (10 - n),
+    'star': lambda n: '★' * n + '☆' * (10 - n),
+    'circle': lambda n: '◉' * n + '◯' * (10 - n),
+    'diamond': lambda n: '◆' * n + '◇' * (10 - n),
+    'triangle': lambda n: '▲' * n + '△' * (10 - n),
+    'arrow': lambda n: '▶' * n + '▷' * (10 - n),
+    'square': lambda n: '⬛' * n + '⬜' * (10 - n),
+    'bracket': lambda n: '[' + '=' * n + ' ' * (10 - n) + ']',
+    'paren': lambda n: '(' + '─' * n + ' ' * (10 - n) + ')',
+    'bar-simple': lambda n: '▌' * n + ' ' * (10 - n),
+}
+
+
+# ============================================================================
+# AUDIO BACKEND
+# ============================================================================
+
+class AudioBackend:
+    """Detect and use available audio backend"""
+    
+    @staticmethod
+    def detect():
+        backends = [
+            ('wpctl', AudioBackend.wpctl),
+            ('pactl', AudioBackend.pactl),
+            ('amixer', AudioBackend.amixer)
+        ]
+        
+        for cmd, handler in backends:
+            if subprocess.run(['which', cmd], capture_output=True).returncode == 0:
+                return handler
+        return None
+    
+    @staticmethod
+    def wpctl():
+        try:
+            result = subprocess.run(['wpctl', 'get-volume', '@DEFAULT_SINK@'],
+                                  capture_output=True, text=True, check=True)
+            parts = result.stdout.strip().split()
+            volume = int(float(parts[1]) * 100)
+            muted = '[MUTED]' in result.stdout
+            return volume, muted
+        except Exception:
+            return 0, False
+    
+    @staticmethod
+    def pactl():
+        try:
+            mute_result = subprocess.run(['pactl', 'get-sink-mute', '@DEFAULT_SINK@'],
+                                        capture_output=True, text=True, check=True)
+            muted = 'yes' in mute_result.stdout
+            
+            vol_result = subprocess.run(['pactl', 'get-sink-volume', '@DEFAULT_SINK@'],
+                                       capture_output=True, text=True, check=True)
+            for line in vol_result.stdout.split('\n'):
+                if '%' in line:
+                    volume = int(line.split('%')[0].split()[-1])
+                    return volume, muted
+            return 0, muted
+        except Exception:
+            return 0, False
+    
+    @staticmethod
+    def amixer():
+        try:
+            result = subprocess.run(['amixer', 'get', 'Master'],
+                                  capture_output=True, text=True, check=True)
+            for line in result.stdout.split('\n'):
+                if '%' in line and '[' in line:
+                    volume = int(line.split('[')[1].split('%')[0])
+                    muted = '[off]' in line
+                    return volume, muted
+            return 0, False
+        except Exception:
+            return 0, False
+
+
+# ============================================================================
+# CSS THEME LOADER
+# ============================================================================
+
+class ThemeLoader:
+    """Load CSS from ~/.themes/volbar/ or system themes"""
+    
+    DEFAULT_CSS = """
+/* Volbar Default Theme */
+
+#volbar-window {
+    background-color: #2b303b;
+    border: 2px solid #4f5b66;
+    border-radius: 8px;
+}
+
+#volbar-window label {
+    color: #c0c5ce;
+}
+
+label#icon-label {
+    color: #c0c5ce;
+    font-size: 18px;
+    min-width: 30px;
+}
+
+label#icon-label.muted {
+    color: #bf616a;
+}
+
+label#slider-label {
+    color: #8fa1b3;
+    font-family: monospace;
+    letter-spacing: 0;
+}
+
+label#slider-label.muted {
+    color: #bf616a;
+}
+
+label#percent-label {
+    color: #c0c5ce;
+}
+
+label#percent-label.muted {
+    color: #bf616a;
+}
+"""
+    
+    @staticmethod
+    def load(theme_name='default', corner_radius=8):
+        """Load CSS theme from file or use default"""
+        user_theme_dir = Path.home() / '.themes' / 'volbar'
+        user_css_file = user_theme_dir / f'{theme_name}.css'
+        
+        system_theme_dir = Path('/usr/local/share/volbar/themes')
+        system_css_file = system_theme_dir / f'{theme_name}.css'
+        
+        user_theme_dir.mkdir(parents=True, exist_ok=True)
+        
+        if user_css_file.exists():
+            css_content = user_css_file.read_text()
+        elif system_css_file.exists():
+            css_content = system_css_file.read_text()
+        else:
+            css_content = ThemeLoader.DEFAULT_CSS
+            user_css_file.write_text(css_content)
+            print(f"Created default theme: {user_css_file}")
+        
+        if corner_radius != 8:
+            css_content = re.sub(r'border-radius:\s*\d+px', 
+                                f'border-radius: {corner_radius}px', css_content)
+        
+        return css_content
+
+
+# ============================================================================
+# VOLUME BAR WINDOW
+# ============================================================================
+
+class VolumeWindow(Gtk.Window):
+    """Simple volume bar window"""
+    
+    # Use emoji icons that work on most systems
+    ICONS = {'muted': '婢', 'low': '', 'medium': '', 'high': ''}
+    
+    def __init__(self, size='medium', placement='center', show_icon=True, 
+                 show_percent=True, slider='blocks', theme='default', corner_radius=8):
+        super().__init__()
+        
+        self.size_preset = SIZES[size]
+        self.placement = placement
+        self.show_icon_flag = show_icon
+        self.show_percent_flag = show_percent
+        self.slider_type = slider
+        self.corner_radius = corner_radius
+        self.positioned = False
+        self.first_update = True
+        
+        self.load_theme(theme, corner_radius)
+        self.setup_window()
+        self.setup_ui()
+    
+    def setup_window(self):
+        """Configure window"""
+        self.set_name('volbar-window')
+        self.set_decorated(False)
+        self.set_skip_taskbar_hint(True)
+        self.set_skip_pager_hint(True)
+        self.set_keep_above(True)
+        self.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
+        
+        width = self.size_preset['width']
+        height = self.size_preset['height']
+        self.set_default_size(width, height)
+        
+        self.connect('show', self.on_show)
+    
+    def setup_ui(self):
+        """Create UI elements"""
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
+        
+        if self.show_icon_flag:
+            self.icon_label = Gtk.Label()
+            self.icon_label.set_name('icon-label')
+            self.icon_label.set_width_chars(2)
+            box.pack_start(self.icon_label, False, False, 0)
+        
+        self.slider_label = Gtk.Label()
+        self.slider_label.set_name('slider-label')
+        self.slider_label.set_width_chars(10)
+        self.slider_label.set_halign(Gtk.Align.START)
+        self.slider_label.set_valign(Gtk.Align.CENTER)
+        box.pack_start(self.slider_label, False, False, 0)
+        
+        if self.show_percent_flag:
+            self.percent_label = Gtk.Label()
+            self.percent_label.set_name('percent-label')
+            self.percent_label.set_width_chars(5)
+            self.percent_label.set_halign(Gtk.Align.END)
+            self.percent_label.set_valign(Gtk.Align.CENTER)
+            self.percent_label.set_size_request(60, -1)
+            box.pack_end(self.percent_label, False, False, 0)
+        
+        self.add(box)
+    
+    def load_theme(self, theme_name, corner_radius):
+        """Load and apply CSS theme"""
+        css = ThemeLoader.load(theme_name, corner_radius)
+        
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(css.encode())
+            style_context = self.get_style_context()
+            style_context.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+            
+            screen = Gdk.Screen.get_default()
+            Gtk.StyleContext.add_provider_for_screen(
+                screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
+            )
+        except Exception as e:
+            print(f"Error loading theme: {e}")
+    
+    def on_show(self, widget):
+        """Position window when shown"""
+        GLib.idle_add(self.position_window)
+    
+    def position_window(self):
+        """Calculate and set position"""
+        window = self.get_window()
+        if not window:
+            return True
+        
+        screen = self.get_screen()
+        if not screen:
+            return False
+        
+        display = screen.get_display()
+        monitor = display.get_monitor_at_window(window)
+        geometry = monitor.get_geometry()
+        
+        width = self.get_allocated_width()
+        height = self.get_allocated_height()
+        
+        calc_pos = PLACEMENTS.get(self.placement, PLACEMENTS['center'])
+        x, y = calc_pos(width, height, geometry.width, geometry.height)
+        
+        self.move(x, y)
+        self.positioned = True
+        
+        return False
+    
+    def update(self, volume, muted):
+        """Update display"""
+        font_size = self.size_preset['font']
+        
+        if self.show_icon_flag:
+            if muted:
+                icon = self.ICONS['muted']
+            elif volume <= 30:
+                icon = self.ICONS['low']
+            elif volume <= 70:
+                icon = self.ICONS['medium']
+            else:
+                icon = self.ICONS['high']
+            
+            self.icon_label.set_markup(f'<span font_desc="{font_size}">{icon}</span>')
+            ctx = self.icon_label.get_style_context()
+            if muted:
+                ctx.add_class('muted')
+            else:
+                ctx.remove_class('muted')
+        
+        blocks = volume // 10
+        slider_func = SLIDERS.get(self.slider_type, SLIDERS['blocks'])
+        slider = slider_func(blocks)
+        
+        self.slider_label.set_markup(
+            f'<span font_desc="monospace {font_size}" letter_spacing="0">{slider}</span>'
+        )
+        ctx = self.slider_label.get_style_context()
+        if muted:
+            ctx.add_class('muted')
+        else:
+            ctx.remove_class('muted')
+        
+        if self.show_percent_flag:
+            text = ' ' if muted else f'{volume}%'
+            self.percent_label.set_markup(
+                f'<span font_desc="{font_size}" weight="bold">{text}</span>'
+            )
+            ctx = self.percent_label.get_style_context()
+            if muted:
+                ctx.add_class('muted')
+            else:
+                ctx.remove_class('muted')
+        
+        if self.first_update and self.is_visible():
+            self.position_window()
+            self.first_update = False
+
+
+# ============================================================================
+# MAIN FUNCTIONS
+# ============================================================================
+
+def print_version():
+    """Print version information"""
+    print(f"Volbar v{VERSION}")
+    print("Simple volume bar for X11 desktops")
+    print("https://github.com/musqz/volbar")
+
+
+def list_sliders():
+    """List available slider styles"""
+    print("Available slider styles:\n")
+    
+    volume = 50
+    blocks = volume // 10
+    
+    for name, slider_func in SLIDERS.items():
+        slider = slider_func(blocks)
+        print(f"  {name:<15} {slider}")
+    
+    print(f"\nUsage: volbar --show --slider SLIDER_NAME")
+    print(f"Example: volbar --show --slider line")
+
+
+def list_themes():
+    """List available themes"""
+    user_theme_dir = Path.home() / '.themes' / 'volbar'
+    system_theme_dir = Path('/usr/local/share/volbar/themes')
+    
+    themes = set()
+    
+    if user_theme_dir.exists():
+        themes.update([f.stem for f in user_theme_dir.glob('*.css')])
+    
+    if system_theme_dir.exists():
+        themes.update([f.stem for f in system_theme_dir.glob('*.css')])
+    
+    if not themes:
+        print("No themes found. Run 'volbar --show' to create default theme.")
+        return
+    
+    themes = sorted(themes)
+    
+    print("Available themes:")
+    for theme in themes:
+        if (user_theme_dir / f'{theme}.css').exists():
+            location = "user"
+        else:
+            location = "system"
+        print(f"  • {theme:<20} [{location}]")
+    
+    print(f"\nUser themes:   {user_theme_dir}")
+    print(f"System themes: {system_theme_dir}")
+    print(f"Usage: volbar --show --theme THEMENAME")
+
+
+def test_themes(args):
+    """Test all available themes"""
+    user_theme_dir = Path.home() / '.themes' / 'volbar'
+    system_theme_dir = Path('/usr/local/share/volbar/themes')
+    
+    themes = set()
+    if user_theme_dir.exists():
+        themes.update([f.stem for f in user_theme_dir.glob('*.css')])
+    if system_theme_dir.exists():
+        themes.update([f.stem for f in system_theme_dir.glob('*.css')])
+    
+    if not themes:
+        print("No themes found. Creating default...")
+        ThemeLoader.load('default', 8)
+        themes = {'default'}
+    
+    themes = sorted(themes)
+    
+    print(f"Testing {len(themes)} themes (3 seconds each)")
+    print("Press Ctrl+C to stop\n")
+    
+    backend = AudioBackend.detect()
+    if not backend:
+        print("No audio backend found")
+        return
+    
+    volume, muted = backend()
+    
+    import time
+    for theme in themes:
+        print(f"Showing: {theme}")
+        
+        window = VolumeWindow(
+            size=args.get('size', 'large'),
+            placement=args.get('placement', 'center'),
+            show_icon=args.get('icon', True),
+            show_percent=args.get('percent', True),
+            slider=args.get('slider', 'blocks'),
+            theme=theme,
+            corner_radius=args.get('corner_radius', 8)
+        )
+        
+        window.update(volume, muted)
+        window.show_all()
+        
+        GLib.timeout_add(3000, lambda: (window.hide(), Gtk.main_quit()))
+        
+        try:
+            Gtk.main()
+        except KeyboardInterrupt:
+            print("\nStopped.")
+            break
+        
+        time.sleep(0.5)
+
+
+def print_help():
+    print(f"""
+Volbar v{VERSION} - Simple Volume Bar
+
+Usage: volbar [OPTIONS]
+
+Options:
+  --size SIZE              small, medium, large (default: medium)
+  --placement POS          center, top, bottom, left, right, top-left, 
+                          top-right, bottom-left, bottom-right (default: center)
+  --icon on|off           Show volume icon (default: on)
+  --percent on|off        Show percentage (default: on)
+  --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
+  --theme NAME            Theme name from ~/.themes/volbar/ (default: default)
+  --corner-radius NUM     Corner radius in pixels (default: 8)
+  --timeout MS            Display timeout in milliseconds (default: 2000)
+  
+  --start-daemon          Start background monitoring daemon
+  --stop-daemon           Stop running daemon
+  --list-themes           List available themes
+  --list-sliders          List available slider styles
+  --test-themes           Preview all themes
+  --show                  Show volume once and exit (default)
+  
+  -h, --help              Show this help
+  -v, --version           Show version
+
+Examples:
+  volbar --show
+  volbar --list-themes
+  volbar --list-sliders
+  volbar --show --slider line
+  volbar --start-daemon --placement top-right --theme gruvbox
+  volbar --stop-daemon
+""")
+
+
+def parse_args():
+    """Parse command line arguments"""
+    args = {
+        'size': 'medium',
+        'placement': 'center',
+        'icon': True,
+        'percent': True,
+        'slider': 'blocks',
+        'theme': 'default',
+        'timeout': 2000,
+        'corner_radius': 8,
+        'mode': 'show'
+    }
+    
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        
+        if arg in ['-h', '--help']:
+            print_help()
+            sys.exit(0)
+        elif arg in ['-v', '--version']:
+            print_version()
+            sys.exit(0)
+        elif arg == '--list-themes':
+            list_themes()
+            sys.exit(0)
+        elif arg == '--list-sliders':
+            list_sliders()
+            sys.exit(0)
+        elif arg == '--test-themes':
+            test_themes(args)
+            sys.exit(0)
+        elif arg == '--stop-daemon':
+            stop_daemon()
+            sys.exit(0)
+        elif arg == '--start-daemon':
+            args['mode'] = 'daemon'
+            i += 1
+        elif arg == '--size' and i + 1 < len(sys.argv):
+            args['size'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--placement' and i + 1 < len(sys.argv):
+            args['placement'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--icon' and i + 1 < len(sys.argv):
+            args['icon'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
+            i += 2
+        elif arg == '--percent' and i + 1 < len(sys.argv):
+            args['percent'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
+            i += 2
+        elif arg == '--slider' and i + 1 < len(sys.argv):
+            args['slider'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--theme' and i + 1 < len(sys.argv):
+            args['theme'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--timeout' and i + 1 < len(sys.argv):
+            args['timeout'] = int(sys.argv[i + 1])
+            i += 2
+        elif arg == '--corner-radius' and i + 1 < len(sys.argv):
+            args['corner_radius'] = int(sys.argv[i + 1])
+            i += 2
+        elif arg == '--show':
+            args['mode'] = 'show'
+            i += 1
+        else:
+            print(f"Unknown option: {arg}")
+            sys.exit(1)
+    
+    return args
+
+
+def show_once(args):
+    """Show volume bar once and exit"""
+    backend = AudioBackend.detect()
+    if not backend:
+        print("✗ No audio backend found")
+        sys.exit(1)
+    
+    volume, muted = backend()
+    
+    window = VolumeWindow(
+        size=args['size'],
+        placement=args['placement'],
+        show_icon=args['icon'],
+        show_percent=args['percent'],
+        slider=args['slider'],
+        theme=args['theme'],
+        corner_radius=args['corner_radius']
+    )
+    
+    window.show_all()
+    
+    while Gtk.events_pending():
+        Gtk.main_iteration_do(False)
+    
+    window.update(volume, muted)
+    
+    GLib.timeout_add(args['timeout'], lambda: (window.hide(), Gtk.main_quit()))
+    
+    Gtk.main()
+
+
+def run_daemon(args):
+    """Run as daemon"""
+    existing_pid = check_daemon_running()
+    if existing_pid:
+        print(f"✗ Daemon already running (PID: {existing_pid})")
+        sys.exit(1)
+    
+    create_pid_file()
+    
+    def cleanup(signum=None, frame=None):
+        remove_pid_file()
+        Gtk.main_quit()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, cleanup)
+    signal.signal(signal.SIGINT, cleanup)
+    
+    backend = AudioBackend.detect()
+    if not backend:
+        print("✗ No audio backend found")
+        remove_pid_file()
+        sys.exit(1)
+    
+    window = VolumeWindow(
+        size=args['size'],
+        placement=args['placement'],
+        show_icon=args['icon'],
+        show_percent=args['percent'],
+        slider=args['slider'],
+        theme=args['theme'],
+        corner_radius=args['corner_radius']
+    )
+    
+    last_volume = -1
+    last_muted = False
+    hide_timeout = None
+    
+    def check_volume():
+        nonlocal last_volume, last_muted, hide_timeout
+        
+        volume, muted = backend()
+        
+        if volume != last_volume or muted != last_muted:
+            last_volume = volume
+            last_muted = muted
+            
+            if not window.is_visible():
+                window.show_all()
+                while Gtk.events_pending():
+                    Gtk.main_iteration_do(False)
+            
+            window.update(volume, muted)
+            
+            if hide_timeout:
+                GLib.source_remove(hide_timeout)
+            hide_timeout = GLib.timeout_add(args['timeout'], lambda: window.hide())
+        
+        return True
+    
+    GLib.timeout_add(200, check_volume)
+    
+    print(f"✓ Volbar daemon started (PID: {os.getpid()})")
+    print(f"  Stop with: volbar --stop-daemon")
+    
+    try:
+        Gtk.main()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cleanup()
+
+
+def main():
+    args = parse_args()
+    
+    if args['mode'] == 'daemon':
+        run_daemon(args)
+    else:
+        show_once(args)
+
+
+if __name__ == '__main__':
+    main()

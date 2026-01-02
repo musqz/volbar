@@ -1,0 +1,35 @@
+/* Gruvbox Dark Theme */
+
+#volnotify-window {
+    background-color: #282828;
+    border: 3px solid #504945;
+    border-radius: 5px;
+}
+
+#volnotify-window label {
+    color: #ebdbb2;
+}
+
+label.icon {
+    color: #ebdbb2;
+}
+
+label.icon.muted {
+    color: #fb4934;
+}
+
+label.slider {
+    color: #83a598;
+}
+
+label.slider.muted {
+    color: #fb4934;
+}
+
+label.percentage {
+    color: #ebdbb2;
+}
+
+label.percentage.muted {
+    color: #fb4934;
+}

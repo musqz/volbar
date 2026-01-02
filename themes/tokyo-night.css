@@ -1,0 +1,37 @@
+/* Tokyo Night Theme */
+
+#volnotify-window {
+    background-color: #1a1b26;
+    border: 2px solid #414868;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+#volnotify-window label {
+    color: #c0caf5;
+}
+
+label.icon {
+    color: #7aa2f7;
+}
+
+label.icon.muted {
+    color: #f7768e;
+}
+
+label.slider {
+    color: #7dcfff;
+}
+
+label.slider.muted {
+    color: #f7768e;
+}
+
+label.percentage {
+    color: #9ece6a;
+    font-weight: bold;
+}
+
+label.percentage.muted {
+    color: #f7768e;
+}

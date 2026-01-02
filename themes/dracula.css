@@ -1,0 +1,36 @@
+/* Dracula Theme */
+
+#volnotify-window {
+    background-color: #282a36;
+    border: 2px solid #6272a4;
+    border-radius: 8px;
+}
+
+#volnotify-window label {
+    color: #f8f8f2;
+}
+
+label.icon {
+    color: #bd93f9;
+}
+
+label.icon.muted {
+    color: #ff5555;
+}
+
+label.slider {
+    color: #8be9fd;
+}
+
+label.slider.muted {
+    color: #ff5555;
+}
+
+label.percentage {
+    color: #50fa7b;
+    font-weight: bold;
+}
+
+label.percentage.muted {
+    color: #ff5555;
+}
