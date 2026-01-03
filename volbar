@@ -102,7 +102,7 @@ SLIDERS = {
     'diamond': lambda n: '◆' * n + '◇' * (10 - n),
     'triangle': lambda n: '▲' * n + '△' * (10 - n),
     'arrow': lambda n: '▶' * n + '▷' * (10 - n),
-    'square': lambda n: '⬛' * n + '⬜' * (10 - n),
+    'square': lambda n: '⬜' * n + '⬛' * (10 - n),
     'bracket': lambda n: '[' + '=' * n + ' ' * (10 - n) + ']',
     'paren': lambda n: '(' + '─' * n + ' ' * (10 - n) + ')',
     'bar-simple': lambda n: '▌' * n + ' ' * (10 - n),
@@ -172,6 +172,31 @@ class AudioBackend:
         except Exception:
             return 0, False
 
+class AudioControl:
+    @staticmethod
+    def volume_up(step):
+        volume, muted = AudioBackend.detect()()
+        new_vol = min(volume + step, 100)
+        subprocess.run(
+            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+    @staticmethod
+    def volume_down(step):
+        volume, muted = AudioBackend.detect()()
+        new_vol = max(volume - step, 0)
+        subprocess.run(
+            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+    @staticmethod
+    def toggle_mute():
+        subprocess.run(
+            ['wpctl', 'set-mute', '@DEFAULT_SINK@', 'toggle'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
 
 # ============================================================================
 # CSS THEME LOADER
@@ -575,6 +600,10 @@ Options:
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
   
+  --systray-icon         Enable system tray volume control (X11 only)
+  --tray-step N          Volume step per scroll (default: 5)
+  --mixer CMD            Mixer command (default: pavucontrol)
+
   --start-daemon          Start background monitoring daemon
   --stop-daemon           Stop running daemon
   --list-themes           List available themes
@@ -609,7 +638,11 @@ def parse_args():
         'timeout': 2000,
         'poll_interval': 200,
         'debug': False,
-        'mode': 'show'
+        'mode': 'show',
+        'systray': False,
+        'tray_step': 5,
+        'mixer': 'pavucontrol',
+
     }
     
     i = 1
@@ -664,6 +697,15 @@ def parse_args():
         elif arg == '--poll-interval' and i + 1 < len(sys.argv):
             args['poll_interval'] = int(sys.argv[i + 1])
             i += 2
+        elif arg == '--systray-icon':
+            args['systray'] = True
+            i += 1
+        elif arg == '--tray-step' and i + 1 < len(sys.argv):
+            args['tray_step'] = int(sys.argv[i + 1])
+            i += 2
+        elif arg == '--mixer' and i + 1 < len(sys.argv):
+            args['mixer'] = sys.argv[i + 1]
+            i += 2
         elif arg == '--show':
             args['mode'] = 'show'
             i += 1
@@ -707,6 +749,88 @@ def show_once(args):
     
     Gtk.main()
 
+class TrayIcon:
+    ICONS = {
+        'muted': 'audio-volume-muted',
+        'low': 'audio-volume-low',
+        'medium': 'audio-volume-medium',
+        'high': 'audio-volume-high',
+    }
+
+    def __init__(self, backend, window, step, mixer):
+        self.backend = backend
+        self.window = window
+        self.step = step
+        self.mixer = mixer
+
+        self.icon = Gtk.StatusIcon()
+        self.icon.set_visible(True)
+
+        self.icon.connect("scroll-event", self.on_scroll)
+        self.icon.connect("button-press-event", self.on_click)
+
+        self.menu = self.build_menu()
+        GLib.timeout_add(400, self.refresh_icon)
+
+    def build_menu(self):
+        menu = Gtk.Menu()
+
+        mixer_item = Gtk.MenuItem(label="Open Mixer")
+        quit_item = Gtk.MenuItem(label="Quit")
+
+        mixer_item.connect(
+            "activate",
+            lambda *_: subprocess.Popen(self.mixer.split(),
+                                        stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL)
+        )
+        quit_item.connect("activate", lambda *_: Gtk.main_quit())
+
+        menu.append(mixer_item)
+        menu.append(Gtk.SeparatorMenuItem())
+        menu.append(quit_item)
+        menu.show_all()
+        return menu
+
+    def on_scroll(self, icon, event):
+        if event.direction == Gdk.ScrollDirection.UP:
+            AudioControl.volume_up(self.step)
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            AudioControl.volume_down(self.step)
+
+        GLib.timeout_add(50, self.show_osd)
+
+    def on_click(self, icon, event):
+        if event.button == 3:
+            self.menu.popup_at_pointer(event)
+        elif event.button in (1, 2):
+            AudioControl.toggle_mute()
+            GLib.timeout_add(50, self.show_osd)
+
+    def show_osd(self):
+        volume, muted = self.backend()
+        self.window.update(volume, muted)
+        if not self.window.is_visible():
+            self.window.show_all()
+        return False
+
+    def refresh_icon(self):
+        volume, muted = self.backend()
+
+        if muted:
+            icon = self.ICONS['muted']
+        elif volume <= 30:
+            icon = self.ICONS['low']
+        elif volume <= 70:
+            icon = self.ICONS['medium']
+        else:
+            icon = self.ICONS['high']
+
+        self.icon.set_from_icon_name(icon)
+        self.icon.set_tooltip_text(
+            "Muted" if muted else f"Volume: {volume}%"
+        )
+        return True
 
 def run_daemon(args):
     """Run as daemon"""
@@ -714,23 +838,23 @@ def run_daemon(args):
     if existing_pid:
         print(f"✗ Daemon already running (PID: {existing_pid})")
         sys.exit(1)
-    
+
     create_pid_file()
-    
+
     def cleanup(signum=None, frame=None):
         remove_pid_file()
         Gtk.main_quit()
         sys.exit(0)
-    
+
     signal.signal(signal.SIGTERM, cleanup)
     signal.signal(signal.SIGINT, cleanup)
-    
+
     backend = AudioBackend.detect()
     if not backend:
         print("✗ No audio backend found (wpctl, pactl, or amixer)")
         remove_pid_file()
         sys.exit(1)
-    
+
     window = VolumeWindow(
         size=args['size'],
         placement=args['placement'],
@@ -740,47 +864,63 @@ def run_daemon(args):
         theme=args['theme'],
         debug=args['debug']
     )
-    
+
+    # Initialize tray icon if requested
+    tray = None
+    if args.get('systray'):
+        tray = TrayIcon(
+            backend=backend,
+            window=window,
+            step=args['tray_step'],
+            mixer=args['mixer']
+        )
+
+    # State variables for volume tracking and OSD
     last_volume = -1
     last_muted = False
     hide_timeout = None
-    
+
+    # Volume polling function
     def check_volume():
         nonlocal last_volume, last_muted, hide_timeout
-        
+
         volume, muted = backend()
-        
+
         if volume != last_volume or muted != last_muted:
             last_volume = volume
             last_muted = muted
-            
+
             if args['debug']:
                 print(f"Volume changed: {volume}%, muted: {muted}")
-            
+
             if not window.is_visible():
                 window.show_all()
                 while Gtk.events_pending():
                     Gtk.main_iteration_do(False)
-            
+
             window.update(volume, muted)
-            
+
             if hide_timeout:
                 GLib.source_remove(hide_timeout)
-            hide_timeout = GLib.timeout_add(args['timeout'], lambda: window.hide())
-        
+            hide_timeout = GLib.timeout_add(
+                args['timeout'], lambda: window.hide()
+            )
+
         return True
-    
+
+    # Poll volume every poll_interval milliseconds
     GLib.timeout_add(args['poll_interval'], check_volume)
-    
+
     print(f"✓ Volbar daemon started (PID: {os.getpid()})")
     print(f"  Stop with: volbar --stop-daemon")
-    
+
     try:
         Gtk.main()
     except KeyboardInterrupt:
         pass
     finally:
         cleanup()
+
 
 
 def main():
