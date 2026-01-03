@@ -269,23 +269,9 @@ class VolumeWindow(Gtk.Window):
         self.positioned = False
         self.first_update = True
         
-        self.setup_transparency()
         self.load_theme(theme)
         self.setup_window()
         self.setup_ui()
-    
-    def setup_transparency(self):
-        """Enable transparency support"""
-        screen = self.get_screen()
-        visual = screen.get_rgba_visual()
-        
-        if visual and screen.is_composited():
-            self.set_visual(visual)
-            if self.debug:
-                print("✓ Transparency enabled")
-        else:
-            if self.debug:
-                print("⚠ Compositor not running - transparency disabled")
     
     def setup_window(self):
         """Configure window"""
@@ -574,6 +560,8 @@ Options:
   --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
   --theme NAME            Theme name from ~/.themes/volbar/ (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
+  --fade-duration MS      Fade animation duration (default: 200)
+  --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
   
   --start-daemon          Start background monitoring daemon
@@ -608,6 +596,8 @@ def parse_args():
         'slider': 'blocks',
         'theme': 'default',
         'timeout': 2000,
+        'fade_duration': 200,
+        'poll_interval': 200,
         'debug': False,
         'mode': 'show'
     }
@@ -660,6 +650,12 @@ def parse_args():
             i += 2
         elif arg == '--timeout' and i + 1 < len(sys.argv):
             args['timeout'] = int(sys.argv[i + 1])
+            i += 2
+        elif arg == '--fade-duration' and i + 1 < len(sys.argv):
+            args['fade_duration'] = int(sys.argv[i + 1])
+            i += 2
+        elif arg == '--poll-interval' and i + 1 < len(sys.argv):
+            args['poll_interval'] = int(sys.argv[i + 1])
             i += 2
         elif arg == '--show':
             args['mode'] = 'show'
