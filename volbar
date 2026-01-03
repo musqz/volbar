@@ -589,9 +589,10 @@ Volbar v{VERSION} - Simple Volume Bar
 Usage: volbar [OPTIONS]
 
 Options:
-  --size SIZE              small, medium, large (default: medium)
-  --placement POS          center, top, bottom, left, right, top-left, 
+  --size SIZE             small, medium, large (default: medium)
+  --placement POS         center, top, bottom, left, right, top-left, 
                           top-right, bottom-left, bottom-right (default: center)
+                           
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
@@ -600,9 +601,9 @@ Options:
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
   
-  --systray-icon         Enable system tray volume control (X11 only)
-  --tray-step N          Volume step per scroll (default: 5)
-  --mixer CMD            Mixer command (default: pavucontrol)
+  --systray-icon          Enable system tray volume control (X11 only)
+  --tray-step N           Volume step per scroll (default: 5)
+  --mixer CMD             Mixer command (default: pavucontrol)
 
   --start-daemon          Start background monitoring daemon
   --stop-daemon           Stop running daemon
