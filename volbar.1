@@ -1,4 +1,4 @@
-.TH VOLBAR 1 "2026" "Volbar 1.0.0" "User Commands"
+.TH VOLBAR 1 "2026" "Volbar 1.1.0" "User Commands"
 .SH NAME
 volbar \- simple volume bar for X11 desktops
 .SH SYNOPSIS
@@ -28,6 +28,12 @@ Theme name from ~/.themes/volbar/ (default: default)
 .TP
 .BR \-\-timeout " \fIMS\fR"
 Display timeout in milliseconds (default: 2000)
+.TP
+.BR \-\-poll\-interval " \fIMS\fR"
+Volume check interval for daemon mode in milliseconds (default: 200)
+.TP
+.BR \-\-debug
+Enable debug output
 .TP
 .BR \-\-start\-daemon
 Start background monitoring daemon
@@ -66,6 +72,9 @@ Show with custom slider style:
 Start daemon mode:
 .B volbar \-\-start\-daemon \-\-placement top-right
 .TP
+Start daemon with faster polling:
+.B volbar \-\-start\-daemon \-\-poll\-interval 100
+.TP
 List available sliders:
 .B volbar \-\-list\-sliders
 .TP
@@ -75,10 +84,18 @@ Stop daemon:
 Themes are stored in
 .IR ~/.themes/volbar/ .
 The default theme is automatically created on first run.
+.PP
+Theme files use CSS to style the volume bar container and labels. The container element is named
+.I #volbar-container
+and label elements use IDs:
+.IR #icon ", " #slider ", and " #percentage .
 .SH FILES
 .TP
 .I ~/.themes/volbar/
 User theme directory
+.TP
+.I /usr/local/share/volbar/themes/
+System theme directory
 .TP
 .I ~/.cache/volbar.pid
 Daemon PID file
@@ -90,6 +107,10 @@ PipeWire (wpctl)
 PulseAudio (pactl)
 .IP 3. 3
 ALSA (amixer)
+.SH DAEMON MODE
+When running in daemon mode, volbar monitors volume changes by polling the audio backend at the interval specified by
+.BR \-\-poll\-interval .
+Lower values (e.g., 100ms) provide more responsive feedback but use slightly more CPU. Higher values (e.g., 500ms) reduce CPU usage but may feel laggy.
 .SH AUTHOR
 Written, with assistance of AI, by musqz <https://github.com/musqz>
 .SH REPORTING BUGS
