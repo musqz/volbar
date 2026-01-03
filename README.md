@@ -132,6 +132,13 @@ volbar --start-daemon --placement bottom --timeout 3000
 - `--list-sliders` - Show slider styles
 - `--test-themes` - Preview all themes
 
+## Systray icon
+
+      --systray-icon         Enable system tray volume control (X11 only)
+      --tray-step N          Volume step per scroll (default: 5)
+      --mixer CMD            Mixer command (default: pavucontrol)
+
+
 ## Themes
 
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
