@@ -1,5 +1,11 @@
 # Volbar
 
+#### Work in process
+
+        todo
+         - add systray icon
+         - icons style ?
+
 Simple X11 volume bar. Tiny footprint, endless tweaking.
 
 ## Features
