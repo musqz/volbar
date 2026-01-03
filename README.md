@@ -134,7 +134,7 @@ volbar --start-daemon --placement bottom --timeout 3000
 
 ## Systray icon
 
-      --systray-icon         Enable system tray volume control (X11 only)
+      --systray-icon         Enable system tray volume control
       --tray-step N          Volume step per scroll (default: 5)
       --mixer CMD            Mixer command (default: pavucontrol)
 
