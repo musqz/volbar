@@ -1,6 +1,6 @@
 # Volbar
 
-Simple X11 volume bar with GTK3. Lightweight popup for Openbox and other window managers.
+Simple X11 volume bar. Tiny footprint, endless tweaking.
 
 ## Features
 
@@ -9,15 +9,24 @@ Simple X11 volume bar with GTK3. Lightweight popup for Openbox and other window 
 - Daemon mode for automatic display
 - 12+ themes with CSS customization
 - Multiple slider styles and placements
+- poll-interval
 
 ## Installation
 
 ```bash
 git clone https://github.com/musqz/volbar.git
 cd volbar
-chmod +x volbar
-sudo cp volbar /usr/local/bin/
-sudo cp volbar.1 /usr/local/share/man/man1/
+chmod +x install.sh 
+sudo ./install
+```
+
+```
+# Set installation paths
+BIN_DIR="$PREFIX/bin"
+MAN_DIR="$PREFIX/share/man/man1"
+THEME_DIR="$PREFIX/share/volbar/themes"
+
+sudo ./install PREFIX=/usr/local
 ```
 
 **Requirements:**
@@ -41,6 +50,13 @@ volbar --start-daemon
 
 # Stop daemon
 volbar --stop-daemon
+```
+
+## Help / Man
+
+```
+volbar --help
+man volbar
 ```
 
 ## Openbox Integration
@@ -131,23 +147,6 @@ label#percentage.muted { color: #ff0000; }
 ```
 
 Use: `volbar --show --theme mytheme`
-
-## Troubleshooting
-
-```bash
-# Debug mode
-volbar --show --debug
-
-# Check daemon status
-ps aux | grep volbar
-
-# Restart daemon
-volbar --stop-daemon
-volbar --start-daemon --debug
-
-# Fix theme permissions
-chmod 644 ~/.themes/volbar/*.css
-```
 
 ## License
 
