@@ -281,6 +281,13 @@ class VolumeWindow(Gtk.Window):
         self.set_skip_pager_hint(True)
         self.set_keep_above(True)
         self.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
+        
+        # Enable transparency support
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        
         self.set_app_paintable(True)
         
         width = self.size_preset['width']
@@ -292,13 +299,19 @@ class VolumeWindow(Gtk.Window):
     
     def on_draw(self, widget, ctx):
         """Handle drawing with transparency"""
+        # Clear with transparency
         ctx.set_source_rgba(0, 0, 0, 0)
-        ctx.set_operator(0)
+        ctx.set_operator(0)  # CLEAR
         ctx.paint()
-        ctx.set_operator(2)
+        ctx.set_operator(2)  # OVER
+        return False  # Important: let GTK continue drawing
     
     def setup_ui(self):
         """Create UI elements"""
+        # Create container with styling
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        container.set_name('volbar-container')
+        
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
         box.set_margin_top(10)
         box.set_margin_bottom(10)
@@ -327,7 +340,8 @@ class VolumeWindow(Gtk.Window):
             self.percent_label.set_size_request(60, -1)
             box.pack_end(self.percent_label, False, False, 0)
         
-        self.add(box)
+        container.add(box)
+        self.add(container)
     
     def load_theme(self, theme_name):
         """Load and apply CSS theme"""

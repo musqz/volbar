@@ -1,35 +1,35 @@
 /* Catppuccin Mocha Theme */
 
-#volbar-window {
+#volbar-container {
     background-color: #1e1e2e;
     border: 2px solid #45475a;
     border-radius: 10px;
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #cdd6f4;
 }
 
-label.icon {
+label#icon {
     color: #cdd6f4;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #f38ba8;
 }
 
-label.slider {
+label#slider {
     color: #89b4fa;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #f38ba8;
 }
 
-label.percentage {
+label#percentage {
     color: #cdd6f4;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #f38ba8;
 }

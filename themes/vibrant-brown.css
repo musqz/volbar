@@ -1,6 +1,6 @@
 /* Vibrant Brown Theme - Warm Earth Tones */
 
-#volbar-window {
+#volbar-container {
     background-color: #1c1410;
     background-image: linear-gradient(135deg, #1c1410 0%, #2d2116 100%);
     border: 3px solid #a1887f;
@@ -8,36 +8,36 @@
     box-shadow: 0 4px 20px rgba(161, 136, 127, 0.4);
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #efebe9;
 }
 
-label.icon {
+label#icon {
     color: #bcaaa4;
     font-size: 28px;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #e57373;
 }
 
-label.slider {
+label#slider {
     color: #8d6e63;
     font-weight: bold;
     letter-spacing: 3px;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #e57373;
 }
 
-label.percentage {
+label#percentage {
     color: #d7ccc8;
     font-weight: bold;
     font-size: 18px;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #e57373;
     font-weight: bold;
 }

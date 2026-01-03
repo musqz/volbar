@@ -1,6 +1,6 @@
 /* Neon Green Theme - Matrix Style */
 
-#volbar-window {
+#volbar-container {
     background-color: #0d0208;
     background-image: linear-gradient(135deg, #0d0208 0%, #1a1310 100%);
     border: 2px solid #00ff41;
@@ -8,36 +8,36 @@
     box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #00ff41;
     text-shadow: 0 0 10px rgba(0, 255, 65, 0.7);
 }
 
-label.icon {
+label#icon {
     color: #00ff41;
     text-shadow: 0 0 15px rgba(0, 255, 65, 0.9);
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #ff0000;
     text-shadow: 0 0 15px rgba(255, 0, 0, 0.9);
 }
 
-label.slider {
+label#slider {
     color: #00ff41;
     text-shadow: 0 0 8px rgba(0, 255, 65, 0.7);
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #ff0000;
     text-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
 }
 
-label.percentage {
+label#percentage {
     color: #39ff14;
     text-shadow: 0 0 10px rgba(57, 255, 20, 0.8);
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #ff0000;
 }
