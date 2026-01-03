@@ -1,10 +1,9 @@
 
-/* volbar Default Theme */
+/* Volbar Default Theme */
 
 #volbar-container {
-    background-color: #2b303b;
+    background-color: rgba(43, 48, 59, 0.95);
     border: 2px solid #4f5b66;
-    border-radius: 8px;
 }
 
 #volbar-container label {
@@ -13,6 +12,8 @@
 
 label#icon {
     color: #c0c5ce;
+    font-size: 18px;
+    min-width: 30px;
 }
 
 label#icon.muted {
@@ -21,6 +22,8 @@ label#icon.muted {
 
 label#slider {
     color: #8fa1b3;
+    font-family: monospace;
+    letter-spacing: 0;
 }
 
 label#slider.muted {

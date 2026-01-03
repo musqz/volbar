@@ -1,0 +1,35 @@
+/* Gruvbox Dark Theme */
+
+#volbar-window {
+    background-color: rgba(rgb(0, 8, 20,0.95)
+    border: 3px solid rgba(rgb(0, 255, 255, 0.95)
+    border-radius: 5px;
+}
+
+#volbar-window label {
+    color: #C05D4F;
+}
+
+label.icon {
+    color: #C05D4F;
+}
+
+label.icon.muted {
+    color: #fb4934;
+}
+
+label.slider {
+    color: #83a598;
+}
+
+label.slider.muted {
+    color: #fb4934;
+}
+
+label.percentage {
+    color: #C05D4F;
+}
+
+label.percentage.muted {
+    color: #fb4934;
+}

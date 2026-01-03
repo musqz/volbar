@@ -1,6 +1,6 @@
 /* Cyberpunk Theme - Neon Pink & Cyan */
 
-#volbar-window {
+#volbar-container {
     background-color: #0a0e27;
     background-image: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
     border: 2px solid #ff00ff;
@@ -8,32 +8,32 @@
     box-shadow: 0 0 20px rgba(255, 0, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1);
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #00ffff;
     text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
 }
 
-label.icon {
+label#icon {
     color: #ff00ff;
     text-shadow: 0 0 15px rgba(255, 0, 255, 0.9);
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #ff0055;
     text-shadow: 0 0 15px rgba(255, 0, 85, 0.9);
 }
 
-label.slider {
+label#slider {
     color: #00ffff;
     text-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #ff0055;
     text-shadow: 0 0 8px rgba(255, 0, 85, 0.7);
 }
 
-label.percentage {
+label#percentage {
     color: #ffff00;
     text-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
     font-weight: bold;

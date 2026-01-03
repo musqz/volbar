@@ -1,35 +1,35 @@
 /* volbar Default Theme */
 
-#volbar-window {
-    background-color: #2b303b;
+#volbar-container {
+    background-color: rgba(40, 40, 74, 0.5);
     border: 2px solid #4f5b66;
     border-radius: 8px;
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #c0c5ce;
 }
 
-label.icon {
+label#icon {
     color: #c0c5ce;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #bf616a;
 }
 
-label.slider {
+label#slider {
     color: #8fa1b3;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #bf616a;
 }
 
-label.percentage {
+label#percentage {
     color: #c0c5ce;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #bf616a;
 }

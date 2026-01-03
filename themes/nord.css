@@ -1,35 +1,35 @@
 /* Nord Theme - Cool Arctic Colors */
 
-#volbar-window {
+#volbar-container {
     background-color: #2e3440;
     border: 2px solid #4c566a;
     border-radius: 8px;
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #eceff4;
 }
 
-label.icon {
+label#icon {
     color: #88c0d0;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #bf616a;
 }
 
-label.slider {
+label#slider {
     color: #81a1c1;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #bf616a;
 }
 
-label.percentage {
+label#percentage {
     color: #d8dee9;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #bf616a;
 }

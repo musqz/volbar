@@ -1,6 +1,6 @@
 /* Vibrant Orange Theme */
 
-#volbar-window {
+#volbar-container {
     background-color: #1a0f00;
     background-image: linear-gradient(135deg, #1a0f00 0%, #2d1a00 100%);
     border: 3px solid #ff9800;
@@ -8,36 +8,36 @@
     box-shadow: 0 4px 20px rgba(255, 152, 0, 0.5);
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #fff3e0;
 }
 
-label.icon {
+label#icon {
     color: #ffb74d;
     font-size: 28px;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #f44336;
 }
 
-label.slider {
+label#slider {
     color: #ff9800;
     font-weight: bold;
     letter-spacing: 3px;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #f44336;
 }
 
-label.percentage {
+label#percentage {
     color: #ffcc80;
     font-weight: bold;
     font-size: 18px;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #f44336;
     font-weight: bold;
 }

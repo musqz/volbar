@@ -1,6 +1,6 @@
 /* Vibrant Blue Theme */
 
-#volbar-window {
+#volbar-container {
     background-color: #0d1b2a;
     background-image: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
     border: 3px solid #2196f3;
@@ -8,36 +8,36 @@
     box-shadow: 0 4px 20px rgba(33, 150, 243, 0.4);
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #e3f2fd;
 }
 
-label.icon {
+label#icon {
     color: #64b5f6;
     font-size: 28px;
 }
 
-label.icon.muted {
+label#icon.muted {
     color: #ef5350;
 }
 
-label.slider {
+label#slider {
     color: #2196f3;
     font-weight: bold;
     letter-spacing: 3px;
 }
 
-label.slider.muted {
+label#slider.muted {
     color: #ef5350;
 }
 
-label.percentage {
+label#percentage {
     color: #90caf9;
     font-weight: bold;
     font-size: 18px;
 }
 
-label.percentage.muted {
+label#percentage.muted {
     color: #ef5350;
     font-weight: bold;
 }
