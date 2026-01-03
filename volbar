@@ -183,12 +183,13 @@ class ThemeLoader:
     DEFAULT_CSS = """
 /* Volbar Default Theme */
 
-#volbar-window {
+#volbar-container {
     background-color: rgba(43, 48, 59, 0.95);
     border: 2px solid #4f5b66;
+    border-radius: 8px;
 }
 
-#volbar-window label {
+#volbar-container label {
     color: #c0c5ce;
 }
 
@@ -255,8 +256,7 @@ class VolumeWindow(Gtk.Window):
     ICONS = {'muted': '🔇', 'low': '🔈', 'medium': '🔉', 'high': '🔊'}
     
     def __init__(self, size='medium', placement='center', show_icon=True, 
-                 show_percent=True, slider='blocks', theme='default', 
-                 fade_duration=200, debug=False):
+                 show_percent=True, slider='blocks', theme='default', debug=False):
         super().__init__()
         
         self.size_preset = SIZES[size]
@@ -264,7 +264,6 @@ class VolumeWindow(Gtk.Window):
         self.show_icon_flag = show_icon
         self.show_percent_flag = show_percent
         self.slider_type = slider
-        self.fade_duration = fade_duration
         self.debug = debug
         self.positioned = False
         self.first_update = True
@@ -541,7 +540,6 @@ def test_themes(args):
             show_percent=args.get('percent', True),
             slider=args.get('slider', 'blocks'),
             theme=theme,
-            fade_duration=args.get('fade_duration', 200),
             debug=args.get('debug', False)
         )
         
@@ -574,7 +572,6 @@ Options:
   --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
   --theme NAME            Theme name from ~/.themes/volbar/ (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
-  --fade-duration MS      Fade animation duration (default: 200)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
   
@@ -610,7 +607,6 @@ def parse_args():
         'slider': 'blocks',
         'theme': 'default',
         'timeout': 2000,
-        'fade_duration': 200,
         'poll_interval': 200,
         'debug': False,
         'mode': 'show'
@@ -665,9 +661,6 @@ def parse_args():
         elif arg == '--timeout' and i + 1 < len(sys.argv):
             args['timeout'] = int(sys.argv[i + 1])
             i += 2
-        elif arg == '--fade-duration' and i + 1 < len(sys.argv):
-            args['fade_duration'] = int(sys.argv[i + 1])
-            i += 2
         elif arg == '--poll-interval' and i + 1 < len(sys.argv):
             args['poll_interval'] = int(sys.argv[i + 1])
             i += 2
@@ -700,7 +693,6 @@ def show_once(args):
         show_percent=args['percent'],
         slider=args['slider'],
         theme=args['theme'],
-        fade_duration=args['fade_duration'],
         debug=args['debug']
     )
     
@@ -746,7 +738,6 @@ def run_daemon(args):
         show_percent=args['percent'],
         slider=args['slider'],
         theme=args['theme'],
-        fade_duration=args['fade_duration'],
         debug=args['debug']
     )
     
