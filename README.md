@@ -52,6 +52,22 @@ volbar --start-daemon
 volbar --stop-daemon
 ```
 
+## Daemon Mode Tips
+
+**Poll Interval** - Controls how often the daemon checks for volume changes (default: 200ms)
+```bash
+# More responsive (checks 10x per second)
+volbar --start-daemon --poll-interval 100
+
+# Less CPU usage (checks 2x per second)
+volbar --start-daemon --poll-interval 500
+```
+
+Lower values = instant feedback, slightly more CPU  
+Higher values = delayed response, saves resources  
+
+*Default 200ms works well for most users*
+
 ## Help / Man
 
 ```
