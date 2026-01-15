@@ -203,7 +203,7 @@ class AudioControl:
 # ============================================================================
 
 class ThemeLoader:
-    """Load CSS from ~/.themes/volbar/ or system themes"""
+    """Load CSS from ~/.config/volbar/themes or system themes"""
     
     DEFAULT_CSS = """
 /* Volbar Default Theme */
@@ -250,7 +250,7 @@ label#percentage.muted {
     @staticmethod
     def load(theme_name='default'):
         """Load CSS theme from file or use default"""
-        user_theme_dir = Path.home() / '.themes' / 'volbar'
+        user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
         user_css_file = user_theme_dir / f'{theme_name}.css'
         
         system_theme_dir = Path('/usr/local/share/volbar/themes')
@@ -496,7 +496,7 @@ def list_sliders():
 
 def list_themes():
     """List available themes"""
-    user_theme_dir = Path.home() / '.themes' / 'volbar'
+    user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
     system_theme_dir = Path('/usr/local/share/volbar/themes')
     
     themes = set()
@@ -528,7 +528,7 @@ def list_themes():
 
 def test_themes(args):
     """Test all available themes"""
-    user_theme_dir = Path.home() / '.themes' / 'volbar'
+    user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
     system_theme_dir = Path('/usr/local/share/volbar/themes')
     
     themes = set()
@@ -596,7 +596,7 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
-  --theme NAME            Theme name from ~/.themes/volbar/ (default: default)
+  --theme NAME            Theme name from ~/.config/volbar/themes (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
