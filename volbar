@@ -72,9 +72,9 @@ def stop_daemon():
 # ============================================================================
 
 SIZES = {
-    'small':  {'width': 200, 'height': 40, 'font': '12'},
-    'medium': {'width': 300, 'height': 60, 'font': '14'},
-    'large':  {'width': 400, 'height': 80, 'font': '16'}
+    'small':  {'width': 200, 'height': 40, 'font': '10'},
+    'medium': {'width': 200, 'height': 40, 'font': '12'},
+    'large':  {'width': 200, 'height': 40, 'font': '16'}
 }
 
 PLACEMENTS = {
