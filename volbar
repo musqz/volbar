@@ -850,14 +850,6 @@ def run_daemon(args):
 
     create_pid_file()
 
-    def cleanup(signum=None, frame=None):
-        remove_pid_file()
-        Gtk.main_quit()
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, cleanup)
-    signal.signal(signal.SIGINT, cleanup)
-
     backend = AudioBackend.detect()
     if not backend:
         print("✗ No audio backend found (wpctl, pactl, or amixer)")
@@ -917,6 +909,22 @@ def run_daemon(args):
 
         return True
 
+    # Cleanup function
+    def cleanup(signum=None, frame=None):
+        if args['debug']:
+            print(f"\nReceived signal {signum}, shutting down...")
+        remove_pid_file()
+        Gtk.main_quit()
+
+    # Use GLib.unix_signal_add for proper GTK signal handling
+    # This works correctly with Gtk.main()
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, cleanup, signal.SIGTERM, None)
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, cleanup, signal.SIGINT, None)
+
+    # Also set up standard signal handlers as fallback
+    signal.signal(signal.SIGTERM, cleanup)
+    signal.signal(signal.SIGINT, cleanup)
+
     # Poll volume every poll_interval milliseconds
     GLib.timeout_add(args['poll_interval'], check_volume)
 
@@ -926,7 +934,7 @@ def run_daemon(args):
     try:
         Gtk.main()
     except KeyboardInterrupt:
-        pass
+        cleanup(signal.SIGINT, None)
     finally:
         cleanup()
 
