@@ -306,6 +306,14 @@ class VolumeWindow(Gtk.Window):
         self.set_keep_above(True)
         self.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
         
+        # CRITICAL: Set to POPUP type for fullscreen compatibility
+        # This prevents other panels from showing
+        self.set_type_hint(Gdk.WindowTypeHint.POPUP_MENU)
+        
+        # Disable window manager decorations and focus
+        self.set_accept_focus(False)
+        self.set_focus_on_map(False)
+        
         # Enable transparency support
         screen = self.get_screen()
         visual = screen.get_rgba_visual()
@@ -320,7 +328,7 @@ class VolumeWindow(Gtk.Window):
         
         self.connect('show', self.on_show)
         self.connect('draw', self.on_draw)
-    
+        
     def on_draw(self, widget, ctx):
         """Handle drawing with transparency"""
         # Clear with transparency
