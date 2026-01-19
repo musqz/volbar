@@ -169,33 +169,10 @@ label#slider.muted,
 label#percentage.muted { color: #ff0000; }
 ```
 
-Use: `volbar --show --theme mytheme`
-
-## Sliders
-
-Available slider styles:
-
-      blocks          █████░░░░░
-      bar             ■■■■■□□□□□
-      dots            ●●●●●○○○○○
-      line            ━━━━━─────
-      equals          =====-----
-      hash            #####·····
-      pipe            |||||     
-      star            ★★★★★☆☆☆☆☆
-      circle          ◉◉◉◉◉◯◯◯◯◯
-      diamond         ◆◆◆◆◆◇◇◇◇◇
-      triangle        ▲▲▲▲▲△△△△△
-      arrow           ▶▶▶▶▶▷▷▷▷▷
-      square          ⬛⬛⬛⬛⬛⬜⬜⬜⬜⬜
-      bracket         [=====     ]
-      paren           (─────     )
-      bar-simple      ▌▌▌▌▌     
-
 ## License
 
 Free software - do whatever you want with it.
 
 ## Author
 
-Written by [musqz](https://github.com/musqz) with AI assistance.
+Written by [musqz](https://github.com/musqz) with AI assistance. _(claude)_
