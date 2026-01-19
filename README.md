@@ -2,34 +2,19 @@
 
 Simple X11 volume bar. Tiny footprint, endless tweaking.
 
+![volbar](https://img.shields.io/badge/version-1.2.0-blue)
+![license](https://img.shields.io/badge/license-free-green)
+
 ## Features
 
 - Minimal & fast GTK3 volume indicator
 - Auto-detects audio backend (PipeWire/PulseAudio/ALSA)
-- Daemon mode for automatic display
-- 12+ themes with CSS customization
+- Daemon mode with configurable poll interval
+- System tray support
+- 13 included themes + CSS customization
 - Multiple slider styles and placements
-- poll-interval
 
-## Installation
-
-```bash
-git clone https://github.com/musqz/volbar.git
-cd volbar
-chmod +x install.sh 
-sudo ./install
-```
-
-```
-# Set installation paths
-BIN_DIR="$PREFIX/bin"
-MAN_DIR="$PREFIX/share/man/man1"
-THEME_DIR="$PREFIX/share/volbar/themes"
-
-sudo ./install PREFIX=/usr/local
-```
-
-**Requirements:**
+## Requirements
 
 ```bash
 # Debian/Ubuntu
@@ -37,6 +22,19 @@ sudo apt install python3-gi gir1.2-gtk-3.0
 
 # Arch Linux
 sudo pacman -S python-gobject gtk3
+```
+
+## Installation
+
+```bash
+git clone https://github.com/musqz/volbar.git
+cd volbar
+sudo ./install.sh
+```
+
+Custom prefix:
+```bash
+sudo ./install.sh --prefix /usr
 ```
 
 ## Quick Start
@@ -52,106 +50,62 @@ volbar --start-daemon
 volbar --stop-daemon
 ```
 
-## Daemon Mode Tips
+## Options
 
-**Poll Interval** - Controls how often the daemon checks for volume changes (default: 200ms)
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `--size` | small, medium, large | medium | Window size |
+| `--placement` | center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right | center | Screen position |
+| `--slider` | blocks, dots, line | blocks | Slider style |
+| `--theme` | theme name | default | CSS theme |
+| `--timeout` | milliseconds | 2000 | Display duration |
+| `--poll-interval` | milliseconds | 200 | Daemon check interval |
+| `--icon` | on, off | on | Show volume icon |
+| `--percent` | on, off | on | Show percentage |
+
+### Slider Styles
+
+```
+blocks   █████░░░░░
+dots     ●●●●●○○○○○
+line     ━━━━━─────
+```
+
+### System Tray
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--systray-icon` | off | Enable tray icon |
+| `--tray-step` | 5 | Volume step per scroll |
+| `--mixer` | pavucontrol | Mixer app for menu |
+
+## Daemon Mode
+
+The daemon monitors volume changes by polling at `--poll-interval`:
+
 ```bash
-# More responsive (checks 10x per second)
+# More responsive (10 checks/second)
 volbar --start-daemon --poll-interval 100
 
-# Less CPU usage (checks 2x per second)
+# Less CPU (2 checks/second)
 volbar --start-daemon --poll-interval 500
 ```
 
-Lower values = instant feedback, slightly more CPU  
-Higher values = delayed response, saves resources  
-
-*Default 200ms works well for most users*
-
-## Help / Man
-
-```
-volbar --help
-man volbar
-```
-
-## Openbox Integration
-
-**Add to `~/.config/openbox/autostart`:**
-
-```bash
-# Start volbar daemon
-volbar --start-daemon --placement top-right --theme nord &
-```
-
-**Add to `~/.config/openbox/rc.xml` keybindings:**
-
-```xml
-<!-- Volume Up -->
-<keybind key="XF86AudioRaiseVolume">
-  <action name="Execute">
-    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+</command>
-  </action>
-</keybind>
-
-<!-- Volume Down -->
-<keybind key="XF86AudioLowerVolume">
-  <action name="Execute">
-    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-</command>
-  </action>
-</keybind>
-
-<!-- Mute Toggle -->
-<keybind key="XF86AudioMute">
-  <action name="Execute">
-    <command>wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle</command>
-  </action>
-</keybind>
-```
-
-*Note: Daemon mode automatically shows the bar when volume changes. Use `pactl` if using PulseAudio instead of PipeWire.*
-
-## Common Options
-
-```bash
-volbar --show --placement top-right --theme gruvbox
-volbar --show --slider line --size large
-volbar --start-daemon --placement bottom --timeout 3000
-```
-
-**Main Options:**
-- `--size` small|medium|large (default: medium)
-- `--placement` center|top|bottom|left|right|top-left|top-right|bottom-left|bottom-right (default: center)
-- `--theme` [name] (default: default)
-- `--slider` blocks|bar|dots|line|equals|hash|pipe|star|circle|diamond|triangle|arrow|square|bracket|paren (default: blocks)
-- `--timeout` [ms] - Display duration (default: 2000)
-- `--poll-interval` [ms] - Daemon check interval (default: 200)
-
-**Commands:**
-- `--list-themes` - Show available themes
-- `--list-sliders` - Show slider styles
-- `--test-themes` - Preview all themes
-
-## Systray icon
-
-      --systray-icon         Enable system tray volume control
-      --tray-step N          Volume step per scroll (default: 5)
-      --mixer CMD            Mixer command (default: pavucontrol)
-
+Default 200ms works well for most setups.
 
 ## Themes
 
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
 
 ```bash
-volbar --list-themes
-volbar --test-themes
-volbar --show --theme cyberpunk
+volbar --list-themes      # List available
+volbar --test-themes      # Preview all
+volbar --show --theme nord
 ```
 
-### Create Custom Theme
+### Custom Themes
 
-Create `~/.themes/volbar/mytheme.css`:
+Create `~/.config/volbar/themes/mytheme.css`:
 
 ```css
 #volbar-container {
@@ -164,9 +118,57 @@ label#icon { color: #00ff00; }
 label#slider { color: #00ff00; }
 label#percentage { color: #ffffff; }
 
+/* Muted state */
 label#icon.muted,
 label#slider.muted,
 label#percentage.muted { color: #ff0000; }
+```
+
+Then use with: `volbar --show --theme mytheme`
+
+## Openbox Integration
+
+**Autostart** (`~/.config/openbox/autostart`):
+```bash
+volbar --start-daemon --placement top-right --theme nord &
+```
+
+**Keybindings** (`~/.config/openbox/rc.xml`):
+```xml
+<keybind key="XF86AudioRaiseVolume">
+  <action name="Execute">
+    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+</command>
+  </action>
+</keybind>
+
+<keybind key="XF86AudioLowerVolume">
+  <action name="Execute">
+    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-</command>
+  </action>
+</keybind>
+
+<keybind key="XF86AudioMute">
+  <action name="Execute">
+    <command>wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle</command>
+  </action>
+</keybind>
+```
+
+Replace `wpctl` with `pactl` for PulseAudio.
+
+## Files
+
+| Path | Description |
+|------|-------------|
+| `~/.config/volbar/themes/` | User themes |
+| `/usr/local/share/volbar/themes/` | System themes |
+| `~/.cache/volbar.pid` | Daemon PID file |
+
+## Help
+
+```bash
+volbar --help
+man volbar
 ```
 
 ## License
@@ -175,4 +177,4 @@ Free software - do whatever you want with it.
 
 ## Author
 
-Written by [musqz](https://github.com/musqz) with AI assistance. _(claude)_
+Written by [musqz](https://github.com/musqz) with AI assistance _(claude)_
