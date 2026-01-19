@@ -11,10 +11,11 @@ import sys
 import os
 import signal
 import re
+import time
 from pathlib import Path
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 
 # ============================================================================
@@ -55,12 +56,29 @@ def stop_daemon():
         try:
             pid = int(PID_FILE.read_text().strip())
             os.kill(pid, signal.SIGTERM)
+            
+            # Wait for daemon to exit (up to 2 seconds)
+            for _ in range(20):
+                time.sleep(0.1)
+                try:
+                    os.kill(pid, 0)  # Check if still running
+                except ProcessLookupError:
+                    break  # Process exited
+            
             print(f"✓ Stopped volbar daemon (PID: {pid})")
-            PID_FILE.unlink()
+            
+            # Clean up PID file if daemon didn't
+            if PID_FILE.exists():
+                PID_FILE.unlink()
+            
             return True
-        except (ProcessLookupError, ValueError):
+        except ProcessLookupError:
             PID_FILE.unlink()
             print("✗ No daemon running (stale PID file removed)")
+            return False
+        except ValueError:
+            PID_FILE.unlink()
+            print("✗ Invalid PID file removed")
             return False
     else:
         print("✗ No daemon running")
@@ -72,9 +90,9 @@ def stop_daemon():
 # ============================================================================
 
 SIZES = {
-    'small':  {'width': 200, 'height': 40, 'font': '10'},
-    'medium': {'width': 200, 'height': 40, 'font': '12'},
-    'large':  {'width': 200, 'height': 40, 'font': '16'}
+    'small':  {'height': 36, 'font': '10'},
+    'medium': {'height': 40, 'font': '12'},
+    'large':  {'height': 48, 'font': '16'}
 }
 
 PLACEMENTS = {
@@ -91,21 +109,8 @@ PLACEMENTS = {
 
 SLIDERS = {
     'blocks': lambda n: '█' * n + '░' * (10 - n),
-    'bar': lambda n: '■' * n + '□' * (10 - n),
-    'dots': lambda n: '●' * n + '○' * (10 - n),
-    'line': lambda n: '━' * n + '─' * (10 - n),
-    'equals': lambda n: '=' * n + '-' * (10 - n),
-    'hash': lambda n: '#' * n + '·' * (10 - n),
-    'pipe': lambda n: '|' * n + ' ' * (10 - n),
-    'star': lambda n: '★' * n + '☆' * (10 - n),
-    'circle': lambda n: '◉' * n + '◯' * (10 - n),
-    'diamond': lambda n: '◆' * n + '◇' * (10 - n),
-    'triangle': lambda n: '▲' * n + '△' * (10 - n),
-    'arrow': lambda n: '▶' * n + '▷' * (10 - n),
-    'square': lambda n: '⬜' * n + '⬛' * (10 - n),
-    'bracket': lambda n: '[' + '=' * n + ' ' * (10 - n) + ']',
-    'paren': lambda n: '(' + '─' * n + ' ' * (10 - n) + ')',
-    'bar-simple': lambda n: '▌' * n + ' ' * (10 - n),
+    'dots':   lambda n: '●' * n + '○' * (10 - n),
+    'line':   lambda n: '━' * n + '─' * (10 - n),
 }
 
 
@@ -322,9 +327,16 @@ class VolumeWindow(Gtk.Window):
         
         self.set_app_paintable(True)
         
-        width = self.size_preset['width']
+        # Calculate width based on visible elements
+        base_width = 30  # padding
+        if self.show_icon_flag:
+            base_width += 35
+        base_width += 120  # slider
+        if self.show_percent_flag:
+            base_width += 55
+        
         height = self.size_preset['height']
-        self.set_default_size(width, height)
+        self.set_default_size(base_width, height)
         
         self.connect('show', self.on_show)
         self.connect('draw', self.on_draw)
@@ -344,32 +356,31 @@ class VolumeWindow(Gtk.Window):
         container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         container.set_name('volbar-container')
         
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         box.set_margin_top(10)
         box.set_margin_bottom(10)
         box.set_margin_start(15)
         box.set_margin_end(15)
         
+        # Icon (left)
         if self.show_icon_flag:
             self.icon_label = Gtk.Label()
             self.icon_label.set_name('icon')
-            self.icon_label.set_width_chars(2)
+            self.icon_label.set_halign(Gtk.Align.START)
             box.pack_start(self.icon_label, False, False, 0)
         
+        # Slider (center, expands)
         self.slider_label = Gtk.Label()
         self.slider_label.set_name('slider')
-        self.slider_label.set_width_chars(10)
-        self.slider_label.set_halign(Gtk.Align.START)
-        self.slider_label.set_valign(Gtk.Align.CENTER)
-        box.pack_start(self.slider_label, False, False, 0)
+        self.slider_label.set_halign(Gtk.Align.CENTER)
+        box.pack_start(self.slider_label, True, True, 0)
         
+        # Percent (right)
         if self.show_percent_flag:
             self.percent_label = Gtk.Label()
             self.percent_label.set_name('percentage')
-            self.percent_label.set_width_chars(5)
             self.percent_label.set_halign(Gtk.Align.END)
-            self.percent_label.set_valign(Gtk.Align.CENTER)
-            self.percent_label.set_size_request(60, -1)
+            self.percent_label.set_width_chars(4)
             box.pack_end(self.percent_label, False, False, 0)
         
         container.add(box)
@@ -562,7 +573,6 @@ def test_themes(args):
     
     volume, muted = backend()
     
-    import time
     for theme in themes:
         print(f"Showing: {theme}")
         
@@ -603,7 +613,7 @@ Options:
                            
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
-  --slider TYPE           blocks, bar, dots, line, etc (default: blocks)
+  --slider TYPE           blocks, dots, line (default: blocks)
   --theme NAME            Theme name from ~/.config/volbar/themes (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
@@ -766,11 +776,12 @@ class TrayIcon:
         'high': 'audio-volume-high',
     }
 
-    def __init__(self, backend, window, step, mixer):
+    def __init__(self, backend, window, step, mixer, cleanup_callback=None):
         self.backend = backend
         self.window = window
         self.step = step
         self.mixer = mixer
+        self.cleanup_callback = cleanup_callback
 
         self.icon = Gtk.StatusIcon()
         self.icon.set_visible(True)
@@ -780,6 +791,15 @@ class TrayIcon:
 
         self.menu = self.build_menu()
         GLib.timeout_add(400, self.refresh_icon)
+
+    def cleanup(self):
+        """Properly cleanup the tray icon before exit"""
+        self.icon.set_visible(False)
+        # Give tint2/panel time to process the icon removal
+        for _ in range(3):
+            while Gtk.events_pending():
+                Gtk.main_iteration_do(False)
+            time.sleep(0.05)
 
     def build_menu(self):
         menu = Gtk.Menu()
@@ -793,13 +813,30 @@ class TrayIcon:
                                         stdout=subprocess.DEVNULL,
                                         stderr=subprocess.DEVNULL)
         )
-        quit_item.connect("activate", lambda *_: Gtk.main_quit())
+        
+        # Call cleanup callback on quit
+        quit_item.connect("activate", self.on_quit)
 
         menu.append(mixer_item)
         menu.append(Gtk.SeparatorMenuItem())
         menu.append(quit_item)
         menu.show_all()
         return menu
+
+    def on_quit(self, *_):
+        """Handle quit from menu - use idle_add for clean exit"""
+        # Schedule quit on idle to let GTK finish processing menu
+        GLib.idle_add(self._do_quit)
+    
+    def _do_quit(self):
+        """Actually quit after cleanup"""
+        if self.cleanup_callback:
+            self.cleanup_callback()
+        else:
+            # Fallback if no callback - clean up ourselves
+            self.cleanup()
+            Gtk.main_quit()
+        return False
 
     def on_scroll(self, icon, event):
         if event.direction == Gdk.ScrollDirection.UP:
@@ -866,20 +903,53 @@ def run_daemon(args):
         debug=args['debug']
     )
 
-    # Initialize tray icon if requested
+    # State variables for volume tracking and OSD
+    last_volume = -1
+    last_muted = False
+    hide_timeout = None
     tray = None
+    
+    # Track if cleanup already ran
+    cleanup_done = False
+
+    # Cleanup function for GLib signal handler
+    def cleanup(*_):
+        nonlocal cleanup_done
+        if cleanup_done:
+            return False
+        cleanup_done = True
+        
+        if args['debug']:
+            print(f"\nShutting down...")
+        
+        # Clean up tray icon first
+        if tray:
+            tray.cleanup()
+        
+        # Hide window
+        window.hide()
+        
+        # Process pending events
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
+        
+        remove_pid_file()
+        
+        # Quit main loop if running
+        if Gtk.main_level() > 0:
+            Gtk.main_quit()
+        
+        return False
+
+    # Initialize tray icon if requested
     if args.get('systray'):
         tray = TrayIcon(
             backend=backend,
             window=window,
             step=args['tray_step'],
-            mixer=args['mixer']
+            mixer=args['mixer'],
+            cleanup_callback=cleanup
         )
-
-    # State variables for volume tracking and OSD
-    last_volume = -1
-    last_muted = False
-    hide_timeout = None
 
     # Volume polling function
     def check_volume():
@@ -909,21 +979,9 @@ def run_daemon(args):
 
         return True
 
-    # Cleanup function
-    def cleanup(signum=None, frame=None):
-        if args['debug']:
-            print(f"\nReceived signal {signum}, shutting down...")
-        remove_pid_file()
-        Gtk.main_quit()
-
-    # Use GLib.unix_signal_add for proper GTK signal handling
-    # This works correctly with Gtk.main()
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, cleanup, signal.SIGTERM, None)
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, cleanup, signal.SIGINT, None)
-
-    # Also set up standard signal handlers as fallback
-    signal.signal(signal.SIGTERM, cleanup)
-    signal.signal(signal.SIGINT, cleanup)
+    # Use only GLib.unix_signal_add for GTK-safe signal handling
+    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, cleanup)
+    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, cleanup)
 
     # Poll volume every poll_interval milliseconds
     GLib.timeout_add(args['poll_interval'], check_volume)
@@ -934,9 +992,13 @@ def run_daemon(args):
     try:
         Gtk.main()
     except KeyboardInterrupt:
-        cleanup(signal.SIGINT, None)
-    finally:
         cleanup()
+    
+    # Final cleanup if not done
+    if not cleanup_done:
+        cleanup()
+    
+    sys.exit(0)
 
 
 
