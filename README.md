@@ -107,7 +107,7 @@ volbar --show --theme nord
 ```
 **[root]** Path: /usr/local/share/volbar/themes/
 
-**[user]** Path: ~/.themes/volbar/
+**[user]** Path: ~/.config/volbar/themes
 
 ### Custom Themes
 
