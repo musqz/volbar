@@ -105,8 +105,9 @@ volbar --test-themes
 # Test single theme
 volbar --show --theme nord
 ```
-[root] Path: /usr/local/share/volbar/themes/
-[user] Path: ~/.themes/volbar/
+**[root]** Path: /usr/local/share/volbar/themes/
+
+**[user]** Path: ~/.themes/volbar/
 
 ### Custom Themes
 
