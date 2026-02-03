@@ -1,6 +1,6 @@
 # Volbar
 
-Simple X11 volume bar. Tiny footprint, highly customizable.
+Minimal X11 volume bar. Small, fast, themeable.
 
 ![volbar](https://img.shields.io/badge/version-1.2.0-blue)
 ![license](https://img.shields.io/badge/license-free-green)
@@ -98,10 +98,15 @@ Default 200ms works well for most setups.
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
 
 ```bash
-volbar --list-themes      # List available
-volbar --test-themes      # Preview all
+# List available themes. [root] or [user]
+volbar --list-themes      
+# Preview all themes in a slide show. Using default settings.
+volbar --test-themes      
+# Test single theme
 volbar --show --theme nord
 ```
+[root] Path: /usr/local/share/volbar/themes/
+[user] Path: ~/.themes/volbar/
 
 ### Custom Themes
 
