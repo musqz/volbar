@@ -1,40 +1,43 @@
-
-/* Volbar Default Theme */
+/* BunsenLabs Red Theme */
 
 #volbar-container {
-    background-color: #2b303b;
-    border: 2px solid #4f5b66;
-    border-radius: 8px;
+    background-color: #1a0a0a;
+    background-image: linear-gradient(135deg, #1a0a0a 0%, #2d1212 100%);
+    border: 3px solid #d32f2f;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(211, 47, 47, 0.4);
 }
 
 #volbar-container label {
-    color: #c0c5ce;
+    color: #ffebee;
 }
 
-label#icon-label {
-    color: #c0c5ce;
+label#icon {
+    color: #ef5350;
+    font-size: 28px;
+}
+
+label#icon.muted {
+    color: #757575;
+}
+
+label#slider {
+    color: #f44336;
+    font-weight: bold;
+    letter-spacing: 3px;
+}
+
+label#slider.muted {
+    color: #757575;
+}
+
+label#percentage {
+    color: #ef9a9a;
+    font-weight: bold;
     font-size: 18px;
-    min-width: 30px;
 }
 
-label#icon-label.muted {
-    color: #bf616a;
-}
-
-label#slider-label {
-    color: #8fa1b3;
-    font-family: monospace;
-    letter-spacing: 0;
-}
-
-label#slider-label.muted {
-    color: #bf616a;
-}
-
-label#percent-label {
-    color: #c0c5ce;
-}
-
-label#percent-label.muted {
-    color: #bf616a;
+label#percentage.muted {
+    color: #757575;
+    font-weight: bold;
 }
