@@ -15,7 +15,19 @@ import time
 from pathlib import Path
 
 
-VERSION = "1.3.0"
+VERSION = "1.2.0"
+
+def get_version():
+    """Get version from version.txt or fallback to hardcoded"""
+    version_paths = [
+        Path(__file__).parent / 'version.txt',
+        Path('/usr/local/share/volbar/version.txt'),
+        Path('/usr/share/volbar/version.txt'),
+    ]
+    for p in version_paths:
+        if p.exists():
+            return p.read_text().strip()
+    return VERSION
 
 
 # ============================================================================
@@ -590,7 +602,7 @@ class VolumeWindow(Gtk.Window):
 
 def print_version():
     """Print version information"""
-    print(f"Volbar v{VERSION}")
+    print(f"Volbar v{get_version()}")
     print("Simple X11 volume bar. Tiny footprint, highly customizable.")
     print("https://github.com/musqz/volbar")
 
@@ -713,8 +725,9 @@ def test_themes(args):
 
 
 def print_help():
+    version = get_version()
     print(f"""
-Volbar v{VERSION} - Simple X11 Volume Bar
+Volbar v{version} - Simple X11 Volume Bar
 
 Usage: volbar [OPTIONS]
 
@@ -726,7 +739,7 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, dots, line (default: blocks)
-  --theme NAME            Theme name from ~/.config/volbar/themes or 'auto', use Mabox auto coloring (default: default)
+  --theme NAME            Theme name or 'auto' for mabox wallpaper colors auto-theming (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output

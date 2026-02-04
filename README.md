@@ -193,8 +193,12 @@ Replace `wpctl` with `pactl` for PulseAudio.
 ## Help
 
 ```bash
+# After installing
 volbar --help
 man volbar
+
+# Before installing
+man ./volbar.1
 ```
 
 ## License
