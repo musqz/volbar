@@ -1,16 +1,16 @@
 .TH VOLBAR 1 "2026" "Volbar 1.2.0" "User Commands"
 .SH NAME
-volbar \- simple volume bar for X11 desktops
+volbar \- simple X11 volume bar. Tiny footprint, highly customizable.
 .SH SYNOPSIS
 .B volbar
 [\fIOPTIONS\fR]
 .SH DESCRIPTION
-Volbar is a simple, lightweight volume bar popup for X11 desktops. It displays volume changes with customizable themes, sizes, positions, and slider styles.
+Volbar is a lightweight volume bar popup for X11 desktops. It displays volume changes with customizable themes, sizes, positions, and slider styles.
 .SH OPTIONS
 .SS Display Options
 .TP
 .BR \-\-size " \fISIZE\fR"
-Window size: small, medium, or large (default: medium)
+Window size: small, medium, large (default: medium)
 .TP
 .BR \-\-placement " \fIPOS\fR"
 Position: center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right (default: center)
@@ -25,7 +25,7 @@ Show percentage (default: on)
 Slider style: blocks, dots, line (default: blocks)
 .TP
 .BR \-\-theme " \fINAME\fR"
-Theme name from ~/.config/volbar/themes/ (default: default)
+Theme name from ~/.config/volbar/themes or 'auto', use Mabox auto coloring (default: default)
 .TP
 .BR \-\-timeout " \fIMS\fR"
 Display timeout in milliseconds (default: 2000)
@@ -38,7 +38,7 @@ Start background monitoring daemon
 Stop running daemon
 .TP
 .BR \-\-poll\-interval " \fIMS\fR"
-Volume check interval for daemon mode in milliseconds (default: 200)
+Volume check interval for daemon in milliseconds (default: 200)
 .SS System Tray Options
 .TP
 .BR \-\-systray\-icon
@@ -61,7 +61,7 @@ List available themes
 List available slider styles
 .TP
 .BR \-\-test\-themes
-Preview all themes with current volume
+Preview all themes
 .TP
 .BR \-\-show
 Show volume once and exit (default mode)
@@ -81,59 +81,20 @@ Display version information
 .TP
 .B line
 ━━━━━─────
-.SH EXAMPLES
-Show volume bar:
-.RS
-.B volbar \-\-show
-.RE
-.PP
-Show with custom theme and placement:
-.RS
-.B volbar \-\-show \-\-placement top-right \-\-theme nord
-.RE
-.PP
-Show with line slider style:
-.RS
-.B volbar \-\-show \-\-slider line
-.RE
-.PP
-Start daemon mode:
-.RS
-.B volbar \-\-start\-daemon \-\-placement top-right
-.RE
-.PP
-Start daemon with system tray:
-.RS
-.B volbar \-\-start\-daemon \-\-systray-icon
-.RE
-.PP
-Start daemon with faster polling:
-.RS
-.B volbar \-\-start\-daemon \-\-poll\-interval 100
-.RE
-.PP
-List available sliders:
-.RS
-.B volbar \-\-list\-sliders
-.RE
-.PP
-Stop daemon:
-.RS
-.B volbar \-\-stop\-daemon
-.RE
 .SH THEMES
-Themes are CSS files stored in user or system directories.
+Themes are CSS files in ~/.config/volbar/themes/ or /usr/local/share/volbar/themes/.
 .PP
-To create a custom theme, create a CSS file in
-.I ~/.config/volbar/themes/
-with the following structure:
+The special theme
+.B auto
+reads colors from Mabox's wallpaper color extraction (~/.config/mabox/jgobthemes/MBcolors.colorrc).
+.PP
+Example custom theme:
 .PP
 .RS
 .nf
 #volbar-container {
     background-color: #1a1a1a;
     border: 2px solid #00ff00;
-    border-radius: 8px;
 }
 
 label#icon { color: #00ff00; }
@@ -145,47 +106,51 @@ label#slider.muted,
 label#percentage.muted { color: #ff0000; }
 .fi
 .RE
+.SH EXAMPLES
+.TP
+.B volbar \-\-show
+Show volume bar once
+.TP
+.B volbar \-\-show \-\-theme auto
+Use Mabox wallpaper colors
+.TP
+.B volbar \-\-show \-\-slider line \-\-placement top
+Line slider at top
+.TP
+.B volbar \-\-start\-daemon \-\-theme auto
+Daemon with wallpaper colors
+.TP
+.B volbar \-\-start\-daemon \-\-systray\-icon
+Daemon with tray icon
+.TP
+.B volbar \-\-stop\-daemon
+Stop daemon
 .SH FILES
 .TP
 .I ~/.config/volbar/themes/
-User theme directory
+User themes
 .TP
 .I /usr/local/share/volbar/themes/
-System theme directory
+System themes
+.TP
+.I ~/.config/mabox/jgobthemes/MBcolors.colorrc
+Mabox wallpaper colors (for auto theme)
 .TP
 .I ~/.cache/volbar.pid
 Daemon PID file
 .SH AUDIO BACKENDS
-Volbar auto-detects audio backends in this order:
-.IP 1. 3
-PipeWire (wpctl)
-.IP 2. 3
-PulseAudio (pactl)
-.IP 3. 3
-ALSA (amixer)
-.SH DAEMON MODE
-When running in daemon mode, volbar monitors volume changes by polling the audio backend at the interval specified by
-.BR \-\-poll\-interval .
-.PP
-Lower values (e.g., 100ms) provide more responsive feedback but use slightly more CPU.
-Higher values (e.g., 500ms) reduce CPU usage but may feel laggy.
-.PP
-The default of 200ms works well for most users.
+Auto-detected in order: PipeWire (wpctl), PulseAudio (pactl), ALSA (amixer).
 .SH SYSTEM TRAY
-When
-.B \-\-systray-icon
-is enabled, volbar adds a status icon to the system tray.
-.PP
 .IP \(bu 2
-Scroll up/down to adjust volume
+Scroll: adjust volume
 .IP \(bu 2
-Left-click or middle-click to toggle mute
+Left/middle-click: toggle mute
 .IP \(bu 2
-Right-click for menu (mixer, quit)
+Right-click: menu
 .SH AUTHOR
 Written, with AI assistance, by musqz <https://github.com/musqz>
 .SH REPORTING BUGS
-Report bugs to: <https://github.com/musqz/volbar/issues>
+<https://github.com/musqz/volbar/issues>
 .SH COPYRIGHT
 This is free software; do whatever you want with it.
 .SH SEE ALSO

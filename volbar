@@ -726,7 +726,7 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, dots, line (default: blocks)
-  --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
+  --theme NAME            Theme name from ~/.config/volbar/themes or 'auto', use Mabox auto coloring (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
