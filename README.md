@@ -1,8 +1,8 @@
 # Volbar
 
-Minimal X11 volume bar. Small, fast, themeable.
+Simple X11 volume bar. Tiny footprint, highly customizable.
 
-![volbar](https://img.shields.io/badge/version-1.2.0-blue)
+![volbar](https://img.shields.io/badge/version-1.3.0-blue)
 ![license](https://img.shields.io/badge/license-free-green)
 
 ## Features
@@ -11,6 +11,7 @@ Minimal X11 volume bar. Small, fast, themeable.
 - Auto-detects audio backend (PipeWire/PulseAudio/ALSA)
 - Daemon mode with configurable poll interval
 - System tray support
+- Auto theme from Mabox wallpaper colors
 - 13 included themes + CSS customization
 - Multiple slider styles and placements
 
@@ -57,7 +58,7 @@ volbar --stop-daemon
 | `--size` | small, medium, large | medium | Window size |
 | `--placement` | center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right | center | Screen position |
 | `--slider` | blocks, dots, line | blocks | Slider style |
-| `--theme` | theme name | default | CSS theme |
+| `--theme` | theme name or `auto` | default | CSS theme |
 | `--timeout` | milliseconds | 2000 | Display duration |
 | `--poll-interval` | milliseconds | 200 | Daemon check interval |
 | `--icon` | on, off | on | Show volume icon |
@@ -98,16 +99,35 @@ Default 200ms works well for most setups.
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
 
 ```bash
-# List available themes. [root] or [user]
+# List available themes
 volbar --list-themes      
-# Preview all themes in a slide show. Using default settings.
+# Preview all themes
 volbar --test-themes      
 # Test single theme
 volbar --show --theme nord
 ```
-**[root]** Path: /usr/local/share/volbar/themes/
 
-**[user]** Path: ~/.config/volbar/themes
+**[system]** /usr/local/share/volbar/themes/
+
+**[user]** ~/.config/volbar/themes/
+
+### Auto Theme (Mabox)
+
+On Mabox Linux, use `--theme auto` to match your wallpaper colors:
+
+```bash
+volbar --show --theme auto
+volbar --start-daemon --theme auto
+```
+
+Colors are read from `~/.config/mabox/jgobthemes/MBcolors.colorrc`.
+
+**Note:** After changing wallpaper, restart the daemon to pick up new colors:
+
+```bash
+volbar --stop-daemon
+volbar --start-daemon --theme auto
+```
 
 ### Custom Themes
 
@@ -117,7 +137,6 @@ Create `~/.config/volbar/themes/mytheme.css`:
 #volbar-container {
     background-color: #1a1a1a;
     border: 2px solid #00ff00;
-    border-radius: 8px;
 }
 
 label#icon { color: #00ff00; }
@@ -136,7 +155,7 @@ Then use with: `volbar --show --theme mytheme`
 
 **Autostart** (`~/.config/openbox/autostart`):
 ```bash
-volbar --start-daemon --placement top-right --theme nord &
+volbar --start-daemon --placement top-right --theme auto &
 ```
 
 **Keybindings** (`~/.config/openbox/rc.xml`):
@@ -168,6 +187,7 @@ Replace `wpctl` with `pactl` for PulseAudio.
 |------|-------------|
 | `~/.config/volbar/themes/` | User themes |
 | `/usr/local/share/volbar/themes/` | System themes |
+| `~/.config/mabox/jgobthemes/MBcolors.colorrc` | Mabox wallpaper colors |
 | `~/.cache/volbar.pid` | Daemon PID file |
 
 ## Help
