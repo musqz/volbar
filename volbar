@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Volbar - Simple volume bar for X11
+Volbar - Simple X11 volume bar. Tiny footprint, highly customizable.
 """
 
 import gi
@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 
 # ============================================================================
@@ -177,6 +177,7 @@ class AudioBackend:
         except Exception:
             return 0, False
 
+
 class AudioControl:
     @staticmethod
     def volume_up(step):
@@ -203,12 +204,16 @@ class AudioControl:
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
+
 # ============================================================================
 # CSS THEME LOADER
 # ============================================================================
 
 class ThemeLoader:
-    """Load CSS from ~/.config/volbar/themes or system themes"""
+    """Load CSS from ~/.config/volbar/themes, system themes, or auto-generate"""
+    
+    # Mabox colorrc location (user config, updated by wallpaper changes)
+    COLORRC_PATH = Path.home() / '.config' / 'mabox' / 'jgobthemes' / 'MBcolors.colorrc'
     
     DEFAULT_CSS = """
 /* Volbar Default Theme */
@@ -251,10 +256,101 @@ label#percentage.muted {
     color: #bf616a;
 }
 """
+
+    @staticmethod
+    def parse_colorrc():
+        """Parse Mabox colorrc file for wallpaper-derived colors"""
+        colors = {}
+        if not ThemeLoader.COLORRC_PATH.exists():
+            return None
+        
+        try:
+            for line in ThemeLoader.COLORRC_PATH.read_text().splitlines():
+                line = line.strip()
+                if '=' in line and line.startswith('color_'):
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    parts = value.strip().split()
+                    if parts and parts[0].startswith('#'):
+                        colors[key] = parts[0]  # Just the hex color
+            return colors if colors else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def generate_auto_theme():
+        """Generate CSS from wallpaper colors (Mabox MBcolors.colorrc)"""
+        c = ThemeLoader.parse_colorrc()
+        if not c:
+            return None
+        
+        # Extract colors with fallbacks
+        bg = c.get('color_menu_bg', '#383838')
+        border = c.get('color_sel_border', c.get('color_sel_bg', '#579c8e'))
+        fg = c.get('color_norm_fg', '#dadada')
+        accent = c.get('color_sel_bg', '#579c8e')
+        title_fg = c.get('color_title_fg', fg)
+        muted_color = '#bf616a'  # Keep consistent muted color
+        
+        return f"""/* Auto-generated from wallpaper colors */
+
+#volbar-container {{
+    background-color: {bg};
+    border: 2px solid {border};
+    border-radius: 8px;
+}}
+
+#volbar-container label {{
+    color: {fg};
+}}
+
+label#icon {{
+    color: {accent};
+    font-size: 18px;
+    min-width: 30px;
+}}
+
+label#icon.muted {{
+    color: {muted_color};
+}}
+
+label#slider {{
+    color: {accent};
+    font-family: monospace;
+    letter-spacing: 0;
+}}
+
+label#slider.muted {{
+    color: {muted_color};
+}}
+
+label#percentage {{
+    color: {title_fg};
+}}
+
+label#percentage.muted {{
+    color: {muted_color};
+}}
+"""
+    
+    @staticmethod
+    def strip_border_radius(css):
+        """Remove border-radius from CSS to let picom handle corners"""
+        return re.sub(r'border-radius\s*:\s*[^;]+;', '', css)
     
     @staticmethod
     def load(theme_name='default'):
-        """Load CSS theme from file or use default"""
+        """Load CSS theme from file, auto-generate, or use default"""
+        
+        # Handle 'auto' theme - generate from wallpaper colors
+        if theme_name == 'auto':
+            css = ThemeLoader.generate_auto_theme()
+            if css:
+                return ThemeLoader.strip_border_radius(css)
+            # Fall back to default if colorrc not available
+            print("⚠ Auto theme: colorrc not found, using default")
+            return ThemeLoader.strip_border_radius(ThemeLoader.DEFAULT_CSS)
+        
         user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
         user_css_file = user_theme_dir / f'{theme_name}.css'
         
@@ -269,10 +365,11 @@ label#percentage.muted {
             css_content = system_css_file.read_text()
         else:
             css_content = ThemeLoader.DEFAULT_CSS
-            user_css_file.write_text(css_content)
-            print(f"Created default theme: {user_css_file}")
+            if theme_name == 'default':
+                user_css_file.write_text(css_content)
+                print(f"Created default theme: {user_css_file}")
         
-        return css_content
+        return ThemeLoader.strip_border_radius(css_content)
 
 
 # ============================================================================
@@ -494,7 +591,7 @@ class VolumeWindow(Gtk.Window):
 def print_version():
     """Print version information"""
     print(f"Volbar v{VERSION}")
-    print("Simple volume bar for X11 desktops")
+    print("Simple X11 volume bar. Tiny footprint, highly customizable.")
     print("https://github.com/musqz/volbar")
 
 
@@ -521,18 +618,27 @@ def list_themes():
     themes = set()
     
     if user_theme_dir.exists():
-        themes.update([f.stem for f in user_theme_dir.glob('*.css')])
+        # Exclude dotfiles (like .auto)
+        themes.update([f.stem for f in user_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
     if system_theme_dir.exists():
-        themes.update([f.stem for f in system_theme_dir.glob('*.css')])
+        themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
-    if not themes:
+    # Check if auto theme is available
+    auto_available = ThemeLoader.COLORRC_PATH.exists()
+    
+    if not themes and not auto_available:
         print("No themes found. Run 'volbar --show' to create default theme.")
         return
     
     themes = sorted(themes)
     
     print("Available themes:")
+    
+    # Show auto theme first if available
+    if auto_available:
+        print(f"  • {'auto':<20} [wallpaper colors]")
+    
     for theme in themes:
         if (user_theme_dir / f'{theme}.css').exists():
             location = "user"
@@ -542,7 +648,9 @@ def list_themes():
     
     print(f"\nUser themes:   {user_theme_dir}")
     print(f"System themes: {system_theme_dir}")
-    print(f"Usage: volbar --show --theme THEMENAME")
+    print(f"\nUsage: volbar --show --theme THEMENAME")
+    if auto_available:
+        print(f"       volbar --show --theme auto  (uses wallpaper colors)")
 
 
 def test_themes(args):
@@ -552,9 +660,13 @@ def test_themes(args):
     
     themes = set()
     if user_theme_dir.exists():
-        themes.update([f.stem for f in user_theme_dir.glob('*.css')])
+        themes.update([f.stem for f in user_theme_dir.glob('*.css') if not f.name.startswith('.')])
     if system_theme_dir.exists():
-        themes.update([f.stem for f in system_theme_dir.glob('*.css')])
+        themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
+    
+    # Add auto theme if available
+    if ThemeLoader.COLORRC_PATH.exists():
+        themes.add('auto')
     
     if not themes:
         print("No themes found. Creating default...")
@@ -602,7 +714,7 @@ def test_themes(args):
 
 def print_help():
     print(f"""
-Volbar v{VERSION} - Simple Volume Bar
+Volbar v{VERSION} - Simple X11 Volume Bar
 
 Usage: volbar [OPTIONS]
 
@@ -614,7 +726,7 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, dots, line (default: blocks)
-  --theme NAME            Theme name from ~/.config/volbar/themes (default: default)
+  --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
@@ -635,10 +747,11 @@ Options:
 
 Examples:
   volbar --show
+  volbar --show --theme auto
   volbar --list-themes
   volbar --list-sliders
   volbar --show --slider line
-  volbar --start-daemon --placement top-right --theme default
+  volbar --start-daemon --placement top-right --theme auto
   volbar --stop-daemon
 
 Note: Corner rounding should be configured via picom compositor settings.
@@ -766,7 +879,12 @@ def show_once(args):
     
     GLib.timeout_add(args['timeout'], lambda: (window.hide(), Gtk.main_quit()))
     
-    Gtk.main()
+    try:
+        Gtk.main()
+    except KeyboardInterrupt:
+        window.hide()
+        sys.exit(0)
+
 
 class TrayIcon:
     ICONS = {
@@ -877,6 +995,7 @@ class TrayIcon:
             "Muted" if muted else f"Volume: {volume}%"
         )
         return True
+
 
 def run_daemon(args):
     """Run as daemon"""
