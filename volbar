@@ -224,8 +224,8 @@ class AudioControl:
 class ThemeLoader:
     """Load CSS from ~/.config/volbar/themes, system themes, or auto-generate"""
     
-    # Mabox colorrc location (user config, updated by wallpaper changes)
-    COLORRC_PATH = Path.home() / '.config' / 'mabox' / 'jgobthemes' / 'MBcolors.colorrc'
+    # Mabox conky config (better contrast colors from wallpaper)
+    CONKY_PATH = Path.home() / '.config' / 'conky' / 'sysinfo_mbcolor.conkyrc'
     
     DEFAULT_CSS = """
 /* Volbar Default Theme */
@@ -270,46 +270,50 @@ label#percentage.muted {
 """
 
     @staticmethod
-    def parse_colorrc():
-        """Parse Mabox colorrc file for wallpaper-derived colors"""
-        colors = {}
-        if not ThemeLoader.COLORRC_PATH.exists():
+    def parse_conky_colors():
+        """Parse Mabox conky config for wallpaper-derived colors"""
+        if not ThemeLoader.CONKY_PATH.exists():
             return None
         
+        colors = {}
         try:
-            for line in ThemeLoader.COLORRC_PATH.read_text().splitlines():
-                line = line.strip()
-                if '=' in line and line.startswith('color_'):
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    parts = value.strip().split()
-                    if parts and parts[0].startswith('#'):
-                        colors[key] = parts[0]  # Just the hex color
+            content = ThemeLoader.CONKY_PATH.read_text()
+            
+            # Parse Lua-style config: key = 'value' or key = '#hex'
+            patterns = {
+                'bg': r"own_window_colour\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
+                'fg': r"default_color\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
+                'accent': r"color0\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
+                'secondary': r"color1\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
+            }
+            
+            for key, pattern in patterns.items():
+                match = re.search(pattern, content)
+                if match:
+                    colors[key] = match.group(1)
+            
             return colors if colors else None
         except Exception:
             return None
 
     @staticmethod
     def generate_auto_theme():
-        """Generate CSS from wallpaper colors (Mabox MBcolors.colorrc)"""
-        c = ThemeLoader.parse_colorrc()
+        """Generate CSS from Mabox conky wallpaper colors"""
+        c = ThemeLoader.parse_conky_colors()
         if not c:
             return None
         
         # Extract colors with fallbacks
-        bg = c.get('color_menu_bg', '#383838')
-        border = c.get('color_sel_border', c.get('color_sel_bg', '#579c8e'))
-        fg = c.get('color_norm_fg', '#dadada')
-        accent = c.get('color_sel_bg', '#579c8e')
-        title_fg = c.get('color_title_fg', fg)
-        muted_color = '#bf616a'  # Keep consistent muted color
+        bg = c.get('bg', '#1a1a1a')
+        fg = c.get('fg', '#e0e0e0')
+        accent = c.get('accent', c.get('fg', '#ff9900'))
+        muted_color = '#bf616a'
         
-        return f"""/* Auto-generated from wallpaper colors */
+        return f"""/* Auto-generated from Mabox conky wallpaper colors */
 
 #volbar-container {{
     background-color: {bg};
-    border: 2px solid {border};
-    border-radius: 8px;
+    border: 2px solid {accent};
 }}
 
 #volbar-container label {{
@@ -337,7 +341,7 @@ label#slider.muted {{
 }}
 
 label#percentage {{
-    color: {title_fg};
+    color: {fg};
 }}
 
 label#percentage.muted {{
@@ -637,7 +641,7 @@ def list_themes():
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
     # Check if auto theme is available
-    auto_available = ThemeLoader.COLORRC_PATH.exists()
+    auto_available = ThemeLoader.CONKY_PATH.exists()
     
     if not themes and not auto_available:
         print("No themes found. Run 'volbar --show' to create default theme.")
@@ -677,7 +681,7 @@ def test_themes(args):
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
     # Add auto theme if available
-    if ThemeLoader.COLORRC_PATH.exists():
+    if ThemeLoader.CONKY_PATH.exists():
         themes.add('auto')
     
     if not themes:
@@ -739,7 +743,7 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           blocks, dots, line (default: blocks)
-  --theme NAME            Theme name or 'auto' for mabox wallpaper colors auto-theming (default: default)
+  --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
