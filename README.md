@@ -52,7 +52,7 @@ volbar --show
 volbar --start-daemon
 ```
 
-## Stopping the Daemon
+##### Stopping the Daemon
 ```
 volbar --stop-daemon
 ```
