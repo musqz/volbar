@@ -42,16 +42,22 @@ sudo ./install.sh --prefix /usr
 
 ## Quick Start
 
+##### Show volume bar once
 ```bash
-# Show volume bar once
 volbar --show
+```
 
-# Start daemon (auto-shows on volume changes)
+##### Start daemon (auto-shows on volume changes)
+```
 volbar --start-daemon
+```
 
-# Stop daemon
+## Stopping the Daemon
+```
 volbar --stop-daemon
 ```
+Always use `volbar --stop-daemon` to ensure proper cleanup.
+Avoid `killall volbar`, as it may leave stale resources.
 
 ## Options
 
