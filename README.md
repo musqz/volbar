@@ -201,10 +201,4 @@ man volbar
 man ./volbar.1
 ```
 
-## License
-
-Free software - do whatever you want with it.
-
-## Author
-
-Written by [musqz](https://github.com/musqz) with AI assistance _(claude)_
+![Overview](images/volbar-demo.gif)
