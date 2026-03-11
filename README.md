@@ -1,5 +1,7 @@
 # Volbar
 
+![Overview](images/volbar.webp)
+
 Simple X11 volume bar. Tiny footprint, highly customizable.
 
 ![volbar](https://img.shields.io/badge/version-1.2.0-blue)
@@ -201,4 +203,4 @@ man volbar
 man ./volbar.1
 ```
 
-![Overview](images/volbar-demo.gif)
+
