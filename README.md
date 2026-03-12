@@ -128,7 +128,7 @@ volbar --show --theme auto
 volbar --start-daemon --theme auto
 ```
 
-Colors are read from `'~/.config/conky/sysinfo_mbcolor.conkyrc`.
+Colors are read from `~/.config/conky/sysinfo_mbcolor.conkyrc`.
 
 **Note:** After changing wallpaper, restart the daemon to pick up new colors:
 
