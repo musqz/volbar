@@ -1,5 +1,7 @@
 # Volbar
 
+![Overview](images/volbar.jpg)
+
 Simple X11 volume bar. Tiny footprint, highly customizable.
 
 ## Features
