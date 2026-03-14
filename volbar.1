@@ -15,11 +15,11 @@ Window size: small, medium, large (default: medium)
 .BR \-\-placement " \fIPOS\fR"
 Position: center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right (default: center)
 .TP
-.BR \-\-no\-icon
-Hide volume icon
+.BR \-\-icon " on|off"
+Show volume icon (default: on)
 .TP
-.BR \-\-no\-percent
-Hide percentage text
+.BR \-\-percent " on|off"
+Show percentage (default: on)
 .TP
 .BR \-\-slider " \fITYPE\fR"
 Slider style: blocks, dots, line (default: blocks)
@@ -68,6 +68,9 @@ Show volume once and exit (default mode)
 .TP
 .BR \-h ", " \-\-help
 Display help message
+.TP
+.BR \-v ", " \-\-version
+Display version information
 .SH SLIDER STYLES
 .TP
 .B blocks
@@ -83,7 +86,7 @@ Themes are CSS files in ~/.config/volbar/themes/ or /usr/local/share/volbar/them
 .PP
 The special theme
 .B auto
-reads colors from Mabox's wallpaper color extraction (~/.config/conky/sysinfo_mbcolor.conkyrc).
+reads colors from Mabox's wallpaper color extraction (~/.config/mabox/jgobthemes/MBcolors.colorrc).
 .PP
 Example custom theme:
 .PP
@@ -93,9 +96,11 @@ Example custom theme:
     background-color: #1a1a1a;
     border: 2px solid #00ff00;
 }
+
 label#icon { color: #00ff00; }
 label#slider { color: #00ff00; }
 label#percentage { color: #ffffff; }
+
 label#icon.muted,
 label#slider.muted,
 label#percentage.muted { color: #ff0000; }
@@ -131,8 +136,8 @@ System themes
 .I ~/.config/conky/sysinfo_mbcolor.conkyrc
 Mabox conky wallpaper colors (for auto theme)
 .TP
-.I $XDG_RUNTIME_DIR/volbar.pid
-Daemon PID file (typically /run/user/1000/volbar.pid)
+.I ~/.cache/volbar.pid
+Daemon PID file
 .SH AUDIO BACKENDS
 Auto-detected in order: PipeWire (wpctl), PulseAudio (pactl), ALSA (amixer).
 .SH SYSTEM TRAY
