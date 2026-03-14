@@ -1,30 +1,23 @@
 # Volbar
 
-![Overview](images/volbar.jpg)
-
 Simple X11 volume bar. Tiny footprint, highly customizable.
-
-![volbar](https://img.shields.io/badge/version-1.2.0-blue)
-![license](https://img.shields.io/badge/license-free-green)
 
 ## Features
 
-- Minimal & fast GTK3 volume indicator
-- Auto-detects audio backend (PipeWire/PulseAudio/ALSA)
-- Daemon mode with configurable poll interval
-- System tray support
-- Auto theme from Mabox wallpaper colors
-- 13 included themes + CSS customization
-- Multiple slider styles and placements
+* **Zero-Config Backend**: Auto-detects PipeWire (`wpctl`), PulseAudio (`pactl`), or ALSA (`amixer`).
+* **Smart Daemon**: Monitors volume changes and only pops up when needed.
+* **XDG Compliant**: Uses standard runtime directories for PID management.
+* **Mabox Integration**: Real-time theme generation from your current wallpaper colors.
+* **Extensive Customization**: 13 built-in themes, multiple slider styles, and CSS support.
 
 ## Requirements
 
 ```bash
-# Debian/Ubuntu
+# Debian/Ubuntu/Mabox/Manjaro
 sudo apt install python3-gi gir1.2-gtk-3.0
-
 # Arch Linux
 sudo pacman -S python-gobject gtk3
+
 ```
 
 ## Installation
@@ -33,181 +26,118 @@ sudo pacman -S python-gobject gtk3
 git clone https://github.com/musqz/volbar.git
 cd volbar
 sudo ./install.sh
-```
 
-Custom prefix:
-```bash
-sudo ./install.sh --prefix /usr
 ```
 
 ## Quick Start
 
-##### Show volume bar once
+##### 1. Explore Styles
+
 ```bash
-volbar --show
+volbar --list-themes   # See all available CSS themes
+volbar --list-sliders  # See available character styles (blocks, dots, etc.)
+
 ```
 
-##### Start daemon (auto-shows on volume changes)
+##### 2. Test Run
+
+```bash
+volbar --show --theme auto --placement top-right
+
 ```
+
+##### 3. Start Daemon (Background Mode)
+
+```bash
 volbar --start-daemon
+
 ```
 
-##### Stopping the Daemon
-```
-volbar --stop-daemon
-```
-Always use `volbar --stop-daemon` to ensure proper cleanup.
-Avoid `killall volbar`, as it may leave stale resources.
+---
 
 ## Options
 
 | Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `--size` | small, medium, large | medium | Window size |
-| `--placement` | center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right | center | Screen position |
-| `--slider` | blocks, dots, line | blocks | Slider style |
-| `--theme` | theme name or `auto` | default | CSS theme |
-| `--timeout` | milliseconds | 2000 | Display duration |
-| `--poll-interval` | milliseconds | 200 | Daemon check interval |
-| `--icon` | on, off | on | Show volume icon |
-| `--percent` | on, off | on | Show percentage |
-
-### Slider Styles
-
-```
-blocks   █████░░░░░
-dots     ●●●●●○○○○○
-line     ━━━━━─────
-```
+| --- | --- | --- | --- |
+| `--size` | `small`, `medium`, `large` | `medium` | Preset window dimensions |
+| `--placement` | `center`, `top`, `bottom`, `left`, `right`, etc. | `center` | Screen position |
+| `--slider` | `blocks`, `dots`, `line` | `blocks` | Character style for the bar |
+| `--theme` | Theme name or `auto` | `default` | CSS theme to apply |
+| `--timeout` | Milliseconds | `2000` | How long the bar stays visible |
+| `--poll-interval` | Milliseconds | `200` | Frequency of volume checks (daemon) |
+| `--no-icon` | Flag | — | Hide the volume icon |
+| `--no-percent` | Flag | — | Hide the percentage text |
+| `--debug` | Flag | — | Print backend and placement logs |
 
 ### System Tray
 
 | Option | Default | Description |
-|--------|---------|-------------|
-| `--systray-icon` | off | Enable tray icon |
-| `--tray-step` | 5 | Volume step per scroll |
-| `--mixer` | pavucontrol | Mixer app for menu |
+| --- | --- | --- |
+| `--systray-icon` | Off | Enable a clickable/scrollable tray icon |
+| `--tray-step` | `5` | Volume % change per scroll wheel notch |
+| `--mixer` | `pavucontrol` | App to open when clicking "Open Mixer" |
+
+---
 
 ## Daemon Mode
 
-The daemon monitors volume changes by polling at `--poll-interval`:
+The daemon handles the logic of showing/hiding the window automatically. It is safe and "smart"—if you change the volume, it appears; otherwise, it stays hidden and consumes negligible CPU.
 
 ```bash
-# More responsive (10 checks/second)
+# Stop a running daemon safely
+volbar --stop-daemon
+
+# Run with custom polling (higher = less CPU, lower = more responsive)
 volbar --start-daemon --poll-interval 100
 
-# Less CPU (2 checks/second)
-volbar --start-daemon --poll-interval 500
 ```
 
-Default 200ms works well for most setups.
+---
 
-## Themes
+## Customization
 
-**Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
+### Themes
 
-```bash
-# List available themes
-volbar --list-themes      
-# Preview all themes
-volbar --test-themes      
-# Test single theme
-volbar --show --theme nord
-```
+Volbar looks for CSS files in:
 
-**[system]** /usr/local/share/volbar/themes/
+1. **User:** `~/.config/volbar/themes/`
+2. **System:** `/usr/local/share/volbar/themes/`
 
-**[user]** ~/.config/volbar/themes/
+**Tip:** Use `volbar --test-themes` to cycle through every installed theme for 3 seconds each to find your favorite.
 
-### Auto Theme (Mabox)
+### Auto Theme (Mabox Linux)
 
-On Mabox Linux, use `--theme auto` to match your wallpaper colors:
+When using `--theme auto`, Volbar parses your Conky configuration (`sysinfo_mbcolor.conkyrc`) to extract colors generated by your wallpaper.
 
-```bash
-volbar --show --theme auto
-volbar --start-daemon --theme auto
-```
+> **Note:** Because Volbar uses GTK, window transparency and rounded corners are best handled by your compositor (like **Picom**).
 
-Colors are read from `~/.config/conky/sysinfo_mbcolor.conkyrc`.
-
-**Note:** After changing wallpaper, restart the daemon to pick up new colors:
-
-```bash
-volbar --stop-daemon
-volbar --start-daemon --theme auto
-```
-Note: The border size of --theme `auto` is hardcoded. (2px)
-
-### Custom Themes
-
-Create `~/.config/volbar/themes/mytheme.css`:
-
-```css
-#volbar-container {
-    background-color: #1a1a1a;
-    border: 2px solid #00ff00;
-}
-
-label#icon { color: #00ff00; }
-label#slider { color: #00ff00; }
-label#percentage { color: #ffffff; }
-
-/* Muted state */
-label#icon.muted,
-label#slider.muted,
-label#percentage.muted { color: #ff0000; }
-```
-
-Then use with: `volbar --show --theme mytheme`
+---
 
 ## Openbox Integration
 
 **Autostart** (`~/.config/openbox/autostart`):
+
 ```bash
-volbar --start-daemon --placement top-right --theme auto &
+volbar --start-daemon --theme auto --placement top --systray-icon &
+
 ```
 
 **Keybindings** (`~/.config/openbox/rc.xml`):
+Since Volbar detects the backend automatically, it doesn't matter if you use `wpctl` or `pactl` in your keybinds; Volbar will "hear" the change regardless.
+
 ```xml
 <keybind key="XF86AudioRaiseVolume">
-  <action name="Execute">
-    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+</command>
-  </action>
+  <action name="Execute"><command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+</command></action>
 </keybind>
 
-<keybind key="XF86AudioLowerVolume">
-  <action name="Execute">
-    <command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-</command>
-  </action>
-</keybind>
-
-<keybind key="XF86AudioMute">
-  <action name="Execute">
-    <command>wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle</command>
-  </action>
-</keybind>
 ```
 
-Replace `wpctl` with `pactl` for PulseAudio.
+---
 
-## Files
+## Files & Paths
 
 | Path | Description |
-|------|-------------|
-| `~/.config/volbar/themes/` | User themes |
-| `/usr/local/share/volbar/themes/` | System themes |
-| `~/.config/mabox/jgobthemes/MBcolors.colorrc` | Mabox wallpaper colors |
-| `~/.cache/volbar.pid` | Daemon PID file |
-
-## Help
-
-```bash
-# After installing
-volbar --help
-man volbar
-
-# Before installing
-man ./volbar.1
-```
-
-
+| --- | --- |
+| `$XDG_RUNTIME_DIR/volbar.pid` | Lock file to prevent multiple daemons |
+| `~/.config/volbar/themes/` | Place your custom `.css` files here |
+| `/usr/local/bin/volbar` | The executable script |
