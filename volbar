@@ -12,6 +12,7 @@ import os
 import signal
 import re
 import time
+import argparse
 from pathlib import Path
 
 
@@ -34,7 +35,9 @@ def get_version():
 # PID FILE MANAGEMENT
 # ============================================================================
 
-PID_FILE = Path.home() / '.cache' / 'volbar.pid'
+# Use XDG_RUNTIME_DIR for volatile runtime data, fallback to /tmp
+XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR', '/tmp')
+PID_FILE = Path(XDG_RUNTIME_DIR) / 'volbar.pid'
 
 
 def create_pid_file():
@@ -56,7 +59,7 @@ def check_daemon_running():
             pid = int(PID_FILE.read_text().strip())
             os.kill(pid, 0)
             return pid
-        except (ProcessLookupError, ValueError):
+        except (OSError, ValueError):
             PID_FILE.unlink()
             return None
     return None
@@ -74,8 +77,8 @@ def stop_daemon():
                 time.sleep(0.1)
                 try:
                     os.kill(pid, 0)  # Check if still running
-                except ProcessLookupError:
-                    break  # Process exited
+                except OSError:
+                    break  # Process exited or changed owner
             
             print(f"✓ Stopped volbar daemon (PID: {pid})")
             
@@ -84,7 +87,7 @@ def stop_daemon():
                 PID_FILE.unlink()
             
             return True
-        except ProcessLookupError:
+        except OSError:
             PID_FILE.unlink()
             print("✗ No daemon running (stale PID file removed)")
             return False
@@ -143,14 +146,14 @@ class AudioBackend:
         
         for cmd, handler in backends:
             if subprocess.run(['which', cmd], capture_output=True).returncode == 0:
-                return handler
-        return None
+                return cmd, handler
+        return None, None
     
     @staticmethod
     def wpctl():
         try:
             result = subprocess.run(['wpctl', 'get-volume', '@DEFAULT_SINK@'],
-                                  capture_output=True, text=True, check=True)
+                                  capture_output=True, text=True, check=True, timeout=0.5)
             parts = result.stdout.strip().split()
             volume = int(float(parts[1]) * 100)
             muted = '[MUTED]' in result.stdout
@@ -162,11 +165,11 @@ class AudioBackend:
     def pactl():
         try:
             mute_result = subprocess.run(['pactl', 'get-sink-mute', '@DEFAULT_SINK@'],
-                                        capture_output=True, text=True, check=True)
+                                        capture_output=True, text=True, check=True, timeout=0.5)
             muted = 'yes' in mute_result.stdout
             
             vol_result = subprocess.run(['pactl', 'get-sink-volume', '@DEFAULT_SINK@'],
-                                       capture_output=True, text=True, check=True)
+                                       capture_output=True, text=True, check=True, timeout=0.5)
             for line in vol_result.stdout.split('\n'):
                 if '%' in line:
                     volume = int(line.split('%')[0].split()[-1])
@@ -179,7 +182,7 @@ class AudioBackend:
     def amixer():
         try:
             result = subprocess.run(['amixer', 'get', 'Master'],
-                                  capture_output=True, text=True, check=True)
+                                  capture_output=True, text=True, check=True, timeout=0.5)
             for line in result.stdout.split('\n'):
                 if '%' in line and '[' in line:
                     volume = int(line.split('[')[1].split('%')[0])
@@ -191,30 +194,61 @@ class AudioBackend:
 
 
 class AudioControl:
+    """Backend-aware volume controls"""
     @staticmethod
     def volume_up(step):
-        volume, muted = AudioBackend.detect()()
-        new_vol = min(volume + step, 100)
-        subprocess.run(
-            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        cmd_name, handler = AudioBackend.detect()
+        if not cmd_name: return
+        try:
+            if cmd_name == 'wpctl':
+                vol, _ = handler()
+                new_vol = min(vol + step, 100)
+                subprocess.run(['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'pactl':
+                subprocess.run(['pactl', 'set-sink-volume', '@DEFAULT_SINK@', f'+{step}%'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'amixer':
+                subprocess.run(['amixer', 'set', 'Master', f'{step}%+'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass
 
     @staticmethod
     def volume_down(step):
-        volume, muted = AudioBackend.detect()()
-        new_vol = max(volume - step, 0)
-        subprocess.run(
-            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        cmd_name, handler = AudioBackend.detect()
+        if not cmd_name: return
+        try:
+            if cmd_name == 'wpctl':
+                vol, _ = handler()
+                new_vol = max(vol - step, 0)
+                subprocess.run(['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'pactl':
+                subprocess.run(['pactl', 'set-sink-volume', '@DEFAULT_SINK@', f'-{step}%'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'amixer':
+                subprocess.run(['amixer', 'set', 'Master', f'{step}%-'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass
 
     @staticmethod
     def toggle_mute():
-        subprocess.run(
-            ['wpctl', 'set-mute', '@DEFAULT_SINK@', 'toggle'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        cmd_name, _ = AudioBackend.detect()
+        if not cmd_name: return
+        try:
+            if cmd_name == 'wpctl':
+                subprocess.run(['wpctl', 'set-mute', '@DEFAULT_SINK@', 'toggle'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'pactl':
+                subprocess.run(['pactl', 'set-sink-mute', '@DEFAULT_SINK@', 'toggle'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+            elif cmd_name == 'amixer':
+                subprocess.run(['amixer', 'set', 'Master', 'toggle'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass
 
 
 # ============================================================================
@@ -224,7 +258,6 @@ class AudioControl:
 class ThemeLoader:
     """Load CSS from ~/.config/volbar/themes, system themes, or auto-generate"""
     
-    # Mabox conky config (better contrast colors from wallpaper)
     CONKY_PATH = Path.home() / '.config' / 'conky' / 'sysinfo_mbcolor.conkyrc'
     
     DEFAULT_CSS = """
@@ -278,8 +311,6 @@ label#percentage.muted {
         colors = {}
         try:
             content = ThemeLoader.CONKY_PATH.read_text()
-            
-            # Parse Lua-style config: key = 'value' or key = '#hex'
             patterns = {
                 'bg': r"own_window_colour\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
                 'fg': r"default_color\s*=\s*['\"]?(#[0-9a-fA-F]{6})",
@@ -303,7 +334,6 @@ label#percentage.muted {
         if not c:
             return None
         
-        # Extract colors with fallbacks
         bg = c.get('bg', '#1a1a1a')
         fg = c.get('fg', '#e0e0e0')
         accent = c.get('accent', c.get('fg', '#ff9900'))
@@ -352,18 +382,16 @@ label#percentage.muted {{
     @staticmethod
     def strip_border_radius(css):
         """Remove border-radius from CSS to let picom handle corners"""
-        return re.sub(r'border-radius\s*:\s*[^;]+;', '', css)
+        # Improved regex to handle missing closing semicolons gracefully
+        return re.sub(r'border-radius\s*:\s*[^;}]+[;]?', '', css)
     
     @staticmethod
     def load(theme_name='default'):
         """Load CSS theme from file, auto-generate, or use default"""
-        
-        # Handle 'auto' theme - generate from wallpaper colors
         if theme_name == 'auto':
             css = ThemeLoader.generate_auto_theme()
             if css:
                 return ThemeLoader.strip_border_radius(css)
-            # Fall back to default if colorrc not available
             print("⚠ Auto theme: colorrc not found, using default")
             return ThemeLoader.strip_border_radius(ThemeLoader.DEFAULT_CSS)
         
@@ -395,7 +423,6 @@ label#percentage.muted {{
 class VolumeWindow(Gtk.Window):
     """Simple volume bar window"""
     
-    # Use emoji icons that work on most systems
     ICONS = {'muted': '🔇', 'low': '🔈', 'medium': '🔉', 'high': '🔊'}
     
     def __init__(self, size='medium', placement='center', show_icon=True, 
@@ -422,17 +449,10 @@ class VolumeWindow(Gtk.Window):
         self.set_skip_taskbar_hint(True)
         self.set_skip_pager_hint(True)
         self.set_keep_above(True)
-        self.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
-        
-        # CRITICAL: Set to POPUP type for fullscreen compatibility
-        # This prevents other panels from showing
         self.set_type_hint(Gdk.WindowTypeHint.POPUP_MENU)
-        
-        # Disable window manager decorations and focus
         self.set_accept_focus(False)
         self.set_focus_on_map(False)
         
-        # Enable transparency support
         screen = self.get_screen()
         visual = screen.get_rgba_visual()
         if visual:
@@ -440,11 +460,10 @@ class VolumeWindow(Gtk.Window):
         
         self.set_app_paintable(True)
         
-        # Calculate width based on visible elements
-        base_width = 30  # padding
+        base_width = 30
         if self.show_icon_flag:
             base_width += 35
-        base_width += 120  # slider
+        base_width += 120
         if self.show_percent_flag:
             base_width += 55
         
@@ -456,16 +475,14 @@ class VolumeWindow(Gtk.Window):
         
     def on_draw(self, widget, ctx):
         """Handle drawing with transparency"""
-        # Clear with transparency
         ctx.set_source_rgba(0, 0, 0, 0)
         ctx.set_operator(0)  # CLEAR
         ctx.paint()
         ctx.set_operator(2)  # OVER
-        return False  # Important: let GTK continue drawing
+        return False
     
     def setup_ui(self):
         """Create UI elements"""
-        # Create container with styling
         container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         container.set_name('volbar-container')
         
@@ -475,20 +492,17 @@ class VolumeWindow(Gtk.Window):
         box.set_margin_start(15)
         box.set_margin_end(15)
         
-        # Icon (left)
         if self.show_icon_flag:
             self.icon_label = Gtk.Label()
             self.icon_label.set_name('icon')
             self.icon_label.set_halign(Gtk.Align.START)
             box.pack_start(self.icon_label, False, False, 0)
         
-        # Slider (center, expands)
         self.slider_label = Gtk.Label()
         self.slider_label.set_name('slider')
         self.slider_label.set_halign(Gtk.Align.CENTER)
         box.pack_start(self.slider_label, True, True, 0)
         
-        # Percent (right)
         if self.show_percent_flag:
             self.percent_label = Gtk.Label()
             self.percent_label.set_name('percentage')
@@ -502,7 +516,6 @@ class VolumeWindow(Gtk.Window):
     def load_theme(self, theme_name):
         """Load and apply CSS theme"""
         css = ThemeLoader.load(theme_name)
-        
         provider = Gtk.CssProvider()
         try:
             provider.load_from_data(css.encode())
@@ -525,12 +538,10 @@ class VolumeWindow(Gtk.Window):
     def position_window(self):
         """Calculate and set position"""
         window = self.get_window()
-        if not window:
-            return True
+        if not window: return True
         
         screen = self.get_screen()
-        if not screen:
-            return False
+        if not screen: return False
         
         display = screen.get_display()
         monitor = display.get_monitor_at_window(window)
@@ -547,7 +558,6 @@ class VolumeWindow(Gtk.Window):
         
         if self.debug:
             print(f"✓ Positioned at ({x}, {y})")
-        
         return False
     
     def update(self, volume, muted):
@@ -566,10 +576,8 @@ class VolumeWindow(Gtk.Window):
             
             self.icon_label.set_markup(f'<span font_desc="{font_size}">{icon}</span>')
             ctx = self.icon_label.get_style_context()
-            if muted:
-                ctx.add_class('muted')
-            else:
-                ctx.remove_class('muted')
+            if muted: ctx.add_class('muted')
+            else: ctx.remove_class('muted')
         
         blocks = volume // 10
         slider_func = SLIDERS.get(self.slider_type, SLIDERS['blocks'])
@@ -579,10 +587,8 @@ class VolumeWindow(Gtk.Window):
             f'<span font_desc="monospace {font_size}" letter_spacing="0">{slider}</span>'
         )
         ctx = self.slider_label.get_style_context()
-        if muted:
-            ctx.add_class('muted')
-        else:
-            ctx.remove_class('muted')
+        if muted: ctx.add_class('muted')
+        else: ctx.remove_class('muted')
         
         if self.show_percent_flag:
             text = 'MUTE' if muted else f'{volume}%'
@@ -590,10 +596,8 @@ class VolumeWindow(Gtk.Window):
                 f'<span font_desc="{font_size}" weight="bold">{text}</span>'
             )
             ctx = self.percent_label.get_style_context()
-            if muted:
-                ctx.add_class('muted')
-            else:
-                ctx.remove_class('muted')
+            if muted: ctx.add_class('muted')
+            else: ctx.remove_class('muted')
         
         if self.first_update and self.is_visible():
             self.position_window()
@@ -601,20 +605,113 @@ class VolumeWindow(Gtk.Window):
 
 
 # ============================================================================
-# MAIN FUNCTIONS
+# TRAY ICON
 # ============================================================================
 
-def print_version():
-    """Print version information"""
-    print(f"Volbar v{get_version()}")
-    print("Simple X11 volume bar. Tiny footprint, highly customizable.")
-    print("https://github.com/musqz/volbar")
+class TrayIcon:
+    ICONS = {
+        'muted': 'audio-volume-muted',
+        'low': 'audio-volume-low',
+        'medium': 'audio-volume-medium',
+        'high': 'audio-volume-high',
+    }
 
+    def __init__(self, backend_handler, window, step, mixer, cleanup_callback=None):
+        self.backend_handler = backend_handler
+        self.window = window
+        self.step = step
+        self.mixer = mixer
+        self.cleanup_callback = cleanup_callback
+
+        self.icon = Gtk.StatusIcon()
+        self.icon.set_visible(True)
+
+        self.icon.connect("scroll-event", self.on_scroll)
+        self.icon.connect("button-press-event", self.on_click)
+
+        self.menu = self.build_menu()
+        GLib.timeout_add(400, self.refresh_icon)
+
+    def cleanup(self):
+        self.icon.set_visible(False)
+        for _ in range(3):
+            while Gtk.events_pending():
+                Gtk.main_iteration_do(False)
+            time.sleep(0.05)
+
+    def build_menu(self):
+        menu = Gtk.Menu()
+        mixer_item = Gtk.MenuItem(label="Open Mixer")
+        quit_item = Gtk.MenuItem(label="Quit")
+
+        mixer_item.connect(
+            "activate",
+            lambda *_: subprocess.Popen(self.mixer.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        )
+        quit_item.connect("activate", self.on_quit)
+
+        menu.append(mixer_item)
+        menu.append(Gtk.SeparatorMenuItem())
+        menu.append(quit_item)
+        menu.show_all()
+        return menu
+
+    def on_quit(self, *_):
+        GLib.idle_add(self._do_quit)
+    
+    def _do_quit(self):
+        if self.cleanup_callback:
+            self.cleanup_callback()
+        else:
+            self.cleanup()
+            Gtk.main_quit()
+        return False
+
+    def on_scroll(self, icon, event):
+        if event.direction == Gdk.ScrollDirection.UP:
+            AudioControl.volume_up(self.step)
+        elif event.direction == Gdk.ScrollDirection.DOWN:
+            AudioControl.volume_down(self.step)
+        GLib.timeout_add(50, self.show_osd)
+
+    def on_click(self, icon, event):
+        if event.button == 3:
+            self.menu.popup_at_pointer(event)
+        elif event.button in (1, 2):
+            AudioControl.toggle_mute()
+            GLib.timeout_add(50, self.show_osd)
+
+    def show_osd(self):
+        volume, muted = self.backend_handler()
+        self.window.update(volume, muted)
+        if not self.window.is_visible():
+            self.window.show_all()
+        return False
+
+    def refresh_icon(self):
+        volume, muted = self.backend_handler()
+
+        if muted:
+            icon = self.ICONS['muted']
+        elif volume <= 30:
+            icon = self.ICONS['low']
+        elif volume <= 70:
+            icon = self.ICONS['medium']
+        else:
+            icon = self.ICONS['high']
+
+        self.icon.set_from_icon_name(icon)
+        self.icon.set_tooltip_text("Muted" if muted else f"Volume: {volume}%")
+        return True
+
+
+# ============================================================================
+# MAIN FUNCTIONS & ARGPARSE
+# ============================================================================
 
 def list_sliders():
     """List available slider styles"""
     print("Available slider styles:\n")
-    
     volume = 50
     blocks = volume // 10
     
@@ -632,15 +729,11 @@ def list_themes():
     system_theme_dir = Path('/usr/local/share/volbar/themes')
     
     themes = set()
-    
     if user_theme_dir.exists():
-        # Exclude dotfiles (like .auto)
         themes.update([f.stem for f in user_theme_dir.glob('*.css') if not f.name.startswith('.')])
-    
     if system_theme_dir.exists():
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
-    # Check if auto theme is available
     auto_available = ThemeLoader.CONKY_PATH.exists()
     
     if not themes and not auto_available:
@@ -648,25 +741,17 @@ def list_themes():
         return
     
     themes = sorted(themes)
-    
     print("Available themes:")
     
-    # Show auto theme first if available
     if auto_available:
         print(f"  • {'auto':<20} [wallpaper colors]")
     
     for theme in themes:
-        if (user_theme_dir / f'{theme}.css').exists():
-            location = "user"
-        else:
-            location = "system"
+        location = "user" if (user_theme_dir / f'{theme}.css').exists() else "system"
         print(f"  • {theme:<20} [{location}]")
     
     print(f"\nUser themes:   {user_theme_dir}")
     print(f"System themes: {system_theme_dir}")
-    print(f"\nUsage: volbar --show --theme THEMENAME")
-    if auto_available:
-        print(f"       volbar --show --theme auto  (uses wallpaper colors)")
 
 
 def test_themes(args):
@@ -680,7 +765,6 @@ def test_themes(args):
     if system_theme_dir.exists():
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
-    # Add auto theme if available
     if ThemeLoader.CONKY_PATH.exists():
         themes.add('auto')
     
@@ -690,33 +774,27 @@ def test_themes(args):
         themes = {'default'}
     
     themes = sorted(themes)
-    
     print(f"Testing {len(themes)} themes (3 seconds each)")
     print("Press Ctrl+C to stop\n")
     
-    backend = AudioBackend.detect()
-    if not backend:
+    cmd_name, handler = AudioBackend.detect()
+    if not handler:
         print("✗ No audio backend found")
         return
     
-    volume, muted = backend()
+    volume, muted = handler()
     
     for theme in themes:
         print(f"Showing: {theme}")
         
         window = VolumeWindow(
-            size=args.get('size', 'large'),
-            placement=args.get('placement', 'center'),
-            show_icon=args.get('icon', True),
-            show_percent=args.get('percent', True),
-            slider=args.get('slider', 'blocks'),
-            theme=theme,
-            debug=args.get('debug', False)
+            size=args['size'], placement=args['placement'],
+            show_icon=args['icon'], show_percent=args['percent'],
+            slider=args['slider'], theme=theme, debug=args['debug']
         )
         
         window.update(volume, muted)
         window.show_all()
-        
         GLib.timeout_add(3000, lambda: (window.hide(), Gtk.main_quit()))
         
         try:
@@ -724,176 +802,32 @@ def test_themes(args):
         except KeyboardInterrupt:
             print("\nStopped.")
             break
-        
         time.sleep(0.5)
-
-
-def print_help():
-    version = get_version()
-    print(f"""
-Volbar v{version} - Simple X11 Volume Bar
-
-Usage: volbar [OPTIONS]
-
-Options:
-  --size SIZE             small, medium, large (default: medium)
-  --placement POS         center, top, bottom, left, right, top-left, 
-                          top-right, bottom-left, bottom-right (default: center)
-                           
-  --icon on|off           Show volume icon (default: on)
-  --percent on|off        Show percentage (default: on)
-  --slider TYPE           blocks, dots, line (default: blocks)
-  --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
-  --timeout MS            Display timeout in milliseconds (default: 2000)
-  --poll-interval MS      Volume check interval for daemon (default: 200)
-  --debug                 Enable debug output
-  
-  --systray-icon          Enable system tray volume control (X11 only)
-  --tray-step N           Volume step per scroll (default: 5)
-  --mixer CMD             Mixer command (default: pavucontrol)
-
-  --start-daemon          Start background monitoring daemon
-  --stop-daemon           Stop running daemon
-  --list-themes           List available themes
-  --list-sliders          List available slider styles
-  --test-themes           Preview all themes
-  --show                  Show volume once and exit (default)
-  
-  -h, --help              Show this help
-  -v, --version           Show version
-
-Examples:
-  volbar --show
-  volbar --show --theme auto
-  volbar --list-themes
-  volbar --list-sliders
-  volbar --show --slider line
-  volbar --start-daemon --placement top-right --theme auto
-  volbar --stop-daemon
-
-Note: Corner rounding should be configured via picom compositor settings.
-""")
-
-
-def parse_args():
-    """Parse command line arguments"""
-    args = {
-        'size': 'medium',
-        'placement': 'center',
-        'icon': True,
-        'percent': True,
-        'slider': 'blocks',
-        'theme': 'default',
-        'timeout': 2000,
-        'poll_interval': 200,
-        'debug': False,
-        'mode': 'show',
-        'systray': False,
-        'tray_step': 5,
-        'mixer': 'pavucontrol',
-
-    }
-    
-    i = 1
-    while i < len(sys.argv):
-        arg = sys.argv[i]
-        
-        if arg in ['-h', '--help']:
-            print_help()
-            sys.exit(0)
-        elif arg in ['-v', '--version']:
-            print_version()
-            sys.exit(0)
-        elif arg == '--list-themes':
-            list_themes()
-            sys.exit(0)
-        elif arg == '--list-sliders':
-            list_sliders()
-            sys.exit(0)
-        elif arg == '--test-themes':
-            test_themes(args)
-            sys.exit(0)
-        elif arg == '--stop-daemon':
-            stop_daemon()
-            sys.exit(0)
-        elif arg == '--debug':
-            args['debug'] = True
-            i += 1
-        elif arg == '--start-daemon':
-            args['mode'] = 'daemon'
-            i += 1
-        elif arg == '--size' and i + 1 < len(sys.argv):
-            args['size'] = sys.argv[i + 1]
-            i += 2
-        elif arg == '--placement' and i + 1 < len(sys.argv):
-            args['placement'] = sys.argv[i + 1]
-            i += 2
-        elif arg == '--icon' and i + 1 < len(sys.argv):
-            args['icon'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
-            i += 2
-        elif arg == '--percent' and i + 1 < len(sys.argv):
-            args['percent'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
-            i += 2
-        elif arg == '--slider' and i + 1 < len(sys.argv):
-            args['slider'] = sys.argv[i + 1]
-            i += 2
-        elif arg == '--theme' and i + 1 < len(sys.argv):
-            args['theme'] = sys.argv[i + 1]
-            i += 2
-        elif arg == '--timeout' and i + 1 < len(sys.argv):
-            args['timeout'] = int(sys.argv[i + 1])
-            i += 2
-        elif arg == '--poll-interval' and i + 1 < len(sys.argv):
-            args['poll_interval'] = int(sys.argv[i + 1])
-            i += 2
-        elif arg == '--systray-icon':
-            args['systray'] = True
-            i += 1
-        elif arg == '--tray-step' and i + 1 < len(sys.argv):
-            args['tray_step'] = int(sys.argv[i + 1])
-            i += 2
-        elif arg == '--mixer' and i + 1 < len(sys.argv):
-            args['mixer'] = sys.argv[i + 1]
-            i += 2
-        elif arg == '--show':
-            args['mode'] = 'show'
-            i += 1
-        else:
-            print(f"Unknown option: {arg}")
-            sys.exit(1)
-    
-    return args
 
 
 def show_once(args):
     """Show volume bar once and exit"""
-    backend = AudioBackend.detect()
-    if not backend:
+    cmd_name, handler = AudioBackend.detect()
+    if not handler:
         print("✗ No audio backend found (wpctl, pactl, or amixer)")
         sys.exit(1)
     
-    volume, muted = backend()
+    volume, muted = handler()
     
     if args['debug']:
-        print(f"Backend detected, volume: {volume}%, muted: {muted}")
+        print(f"Backend detected: {cmd_name}, volume: {volume}%, muted: {muted}")
     
     window = VolumeWindow(
-        size=args['size'],
-        placement=args['placement'],
-        show_icon=args['icon'],
-        show_percent=args['percent'],
-        slider=args['slider'],
-        theme=args['theme'],
+        size=args['size'], placement=args['placement'], show_icon=args['icon'],
+        show_percent=args['percent'], slider=args['slider'], theme=args['theme'],
         debug=args['debug']
     )
     
     window.show_all()
-    
     while Gtk.events_pending():
         Gtk.main_iteration_do(False)
     
     window.update(volume, muted)
-    
     GLib.timeout_add(args['timeout'], lambda: (window.hide(), Gtk.main_quit()))
     
     try:
@@ -901,117 +835,6 @@ def show_once(args):
     except KeyboardInterrupt:
         window.hide()
         sys.exit(0)
-
-
-class TrayIcon:
-    ICONS = {
-        'muted': 'audio-volume-muted',
-        'low': 'audio-volume-low',
-        'medium': 'audio-volume-medium',
-        'high': 'audio-volume-high',
-    }
-
-    def __init__(self, backend, window, step, mixer, cleanup_callback=None):
-        self.backend = backend
-        self.window = window
-        self.step = step
-        self.mixer = mixer
-        self.cleanup_callback = cleanup_callback
-
-        self.icon = Gtk.StatusIcon()
-        self.icon.set_visible(True)
-
-        self.icon.connect("scroll-event", self.on_scroll)
-        self.icon.connect("button-press-event", self.on_click)
-
-        self.menu = self.build_menu()
-        GLib.timeout_add(400, self.refresh_icon)
-
-    def cleanup(self):
-        """Properly cleanup the tray icon before exit"""
-        self.icon.set_visible(False)
-        # Give tint2/panel time to process the icon removal
-        for _ in range(3):
-            while Gtk.events_pending():
-                Gtk.main_iteration_do(False)
-            time.sleep(0.05)
-
-    def build_menu(self):
-        menu = Gtk.Menu()
-
-        mixer_item = Gtk.MenuItem(label="Open Mixer")
-        quit_item = Gtk.MenuItem(label="Quit")
-
-        mixer_item.connect(
-            "activate",
-            lambda *_: subprocess.Popen(self.mixer.split(),
-                                        stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL)
-        )
-        
-        # Call cleanup callback on quit
-        quit_item.connect("activate", self.on_quit)
-
-        menu.append(mixer_item)
-        menu.append(Gtk.SeparatorMenuItem())
-        menu.append(quit_item)
-        menu.show_all()
-        return menu
-
-    def on_quit(self, *_):
-        """Handle quit from menu - use idle_add for clean exit"""
-        # Schedule quit on idle to let GTK finish processing menu
-        GLib.idle_add(self._do_quit)
-    
-    def _do_quit(self):
-        """Actually quit after cleanup"""
-        if self.cleanup_callback:
-            self.cleanup_callback()
-        else:
-            # Fallback if no callback - clean up ourselves
-            self.cleanup()
-            Gtk.main_quit()
-        return False
-
-    def on_scroll(self, icon, event):
-        if event.direction == Gdk.ScrollDirection.UP:
-            AudioControl.volume_up(self.step)
-        elif event.direction == Gdk.ScrollDirection.DOWN:
-            AudioControl.volume_down(self.step)
-
-        GLib.timeout_add(50, self.show_osd)
-
-    def on_click(self, icon, event):
-        if event.button == 3:
-            self.menu.popup_at_pointer(event)
-        elif event.button in (1, 2):
-            AudioControl.toggle_mute()
-            GLib.timeout_add(50, self.show_osd)
-
-    def show_osd(self):
-        volume, muted = self.backend()
-        self.window.update(volume, muted)
-        if not self.window.is_visible():
-            self.window.show_all()
-        return False
-
-    def refresh_icon(self):
-        volume, muted = self.backend()
-
-        if muted:
-            icon = self.ICONS['muted']
-        elif volume <= 30:
-            icon = self.ICONS['low']
-        elif volume <= 70:
-            icon = self.ICONS['medium']
-        else:
-            icon = self.ICONS['high']
-
-        self.icon.set_from_icon_name(icon)
-        self.icon.set_tooltip_text(
-            "Muted" if muted else f"Volume: {volume}%"
-        )
-        return True
 
 
 def run_daemon(args):
@@ -1023,125 +846,108 @@ def run_daemon(args):
 
     create_pid_file()
 
-    backend = AudioBackend.detect()
-    if not backend:
+    cmd_name, handler = AudioBackend.detect()
+    if not handler:
         print("✗ No audio backend found (wpctl, pactl, or amixer)")
         remove_pid_file()
         sys.exit(1)
 
     window = VolumeWindow(
-        size=args['size'],
-        placement=args['placement'],
-        show_icon=args['icon'],
-        show_percent=args['percent'],
-        slider=args['slider'],
-        theme=args['theme'],
+        size=args['size'], placement=args['placement'], show_icon=args['icon'],
+        show_percent=args['percent'], slider=args['slider'], theme=args['theme'],
         debug=args['debug']
     )
 
-    # State variables for volume tracking and OSD
-    last_volume = -1
-    last_muted = False
-    hide_timeout = None
-    tray = None
-    
-    # Track if cleanup already ran
-    cleanup_done = False
+    # State variables to detect changes
+    state = {'volume': -1, 'muted': None}
 
-    # Cleanup function for GLib signal handler
-    def cleanup(*_):
-        nonlocal cleanup_done
-        if cleanup_done:
-            return False
-        cleanup_done = True
-        
-        if args['debug']:
-            print(f"\nShutting down...")
-        
-        # Clean up tray icon first
-        if tray:
-            tray.cleanup()
-        
-        # Hide window
-        window.hide()
-        
-        # Process pending events
-        while Gtk.events_pending():
-            Gtk.main_iteration_do(False)
-        
-        remove_pid_file()
-        
-        # Quit main loop if running
-        if Gtk.main_level() > 0:
-            Gtk.main_quit()
-        
-        return False
-
-    # Initialize tray icon if requested
-    if args.get('systray'):
-        tray = TrayIcon(
-            backend=backend,
-            window=window,
-            step=args['tray_step'],
-            mixer=args['mixer'],
-            cleanup_callback=cleanup
-        )
-
-    # Volume polling function
     def check_volume():
-        nonlocal last_volume, last_muted, hide_timeout
-
-        volume, muted = backend()
-
-        if volume != last_volume or muted != last_muted:
-            last_volume = volume
-            last_muted = muted
-
-            if args['debug']:
-                print(f"Volume changed: {volume}%, muted: {muted}")
-
+        vol, muted = handler()
+        # Only update GUI if values actually changed
+        if vol != state['volume'] or muted != state['muted']:
+            state['volume'] = vol
+            state['muted'] = muted
+            window.update(vol, muted)
             if not window.is_visible():
                 window.show_all()
-                while Gtk.events_pending():
-                    Gtk.main_iteration_do(False)
-
-            window.update(volume, muted)
-
-            if hide_timeout:
-                GLib.source_remove(hide_timeout)
-            hide_timeout = GLib.timeout_add(
-                args['timeout'], lambda: window.hide()
-            )
-
+                # Hide window after configured timeout
+                GLib.timeout_add(args['timeout'], hide_window)
         return True
 
-    # Use only GLib.unix_signal_add for GTK-safe signal handling
-    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, cleanup)
-    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, cleanup)
+    def hide_window():
+        window.hide()
+        return False
 
-    # Poll volume every poll_interval milliseconds
+    # Start the polling loop
     GLib.timeout_add(args['poll_interval'], check_volume)
 
-    print(f"✓ Volbar daemon started (PID: {os.getpid()})")
-    print(f"  Stop with: volbar --stop-daemon")
+    tray = None
+    if args['systray']:
+        tray = TrayIcon(handler, window, args['tray_step'], args['mixer'], cleanup_and_exit)
 
+    def cleanup_and_exit(tray_icon=None):
+        remove_pid_file()
+        if tray_icon:
+            tray_icon.cleanup()
+        Gtk.main_quit()
+
+    signal.signal(signal.SIGTERM, lambda sig, frame: cleanup_and_exit(tray))
+    signal.signal(signal.SIGINT, lambda sig, frame: cleanup_and_exit(tray))
+
+    print(f"✓ Volbar daemon started (PID: {os.getpid()})")
+    
     try:
         Gtk.main()
     except KeyboardInterrupt:
-        cleanup()
-    
-    # Final cleanup if not done
-    if not cleanup_done:
-        cleanup()
-    
-    sys.exit(0)
+        cleanup_and_exit(tray)
 
+
+def parse_arguments():
+    """Parse command line arguments using argparse"""
+    parser = argparse.ArgumentParser(description=f"Volbar v{get_version()} - Simple X11 Volume Bar", 
+                                     epilog="Note: Corner rounding should be configured via picom compositor settings.")
+    
+    parser.add_argument('--size', choices=['small', 'medium', 'large'], default='medium', help="Size preset (default: medium)")
+    parser.add_argument('--placement', choices=PLACEMENTS.keys(), default='center', help="Window placement (default: center)")
+    
+    parser.add_argument('--no-icon', dest='icon', action='store_false', help="Hide volume icon")
+    parser.add_argument('--no-percent', dest='percent', action='store_false', help="Hide percentage text")
+    
+    parser.add_argument('--slider', choices=SLIDERS.keys(), default='blocks', help="Slider style (default: blocks)")
+    parser.add_argument('--theme', default='default', help="Theme name or 'auto' for wallpaper colors (default: default)")
+    
+    parser.add_argument('--timeout', type=int, default=2000, help="Display timeout in ms (default: 2000)")
+    parser.add_argument('--poll-interval', type=int, default=200, help="Volume check interval for daemon in ms (default: 200)")
+    parser.add_argument('--debug', action='store_true', help="Enable debug output")
+    
+    parser.add_argument('--systray-icon', dest='systray', action='store_true', help="Enable system tray volume control (X11 only)")
+    parser.add_argument('--tray-step', type=int, default=5, help="Volume step per scroll (default: 5)")
+    parser.add_argument('--mixer', default='pavucontrol', help="Mixer command (default: pavucontrol)")
+    
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--start-daemon', action='store_const', dest='mode', const='daemon', help="Start background monitoring daemon")
+    group.add_argument('--stop-daemon', action='store_const', dest='mode', const='stop', help="Stop running daemon")
+    group.add_argument('--list-themes', action='store_const', dest='mode', const='list_themes', help="List available themes")
+    group.add_argument('--list-sliders', action='store_const', dest='mode', const='list_sliders', help="List available slider styles")
+    group.add_argument('--test-themes', action='store_const', dest='mode', const='test_themes', help="Preview all themes")
+    group.add_argument('--show', action='store_const', dest='mode', const='show', help="Show volume once and exit (default)")
+    
+    parser.set_defaults(mode='show', icon=True, percent=True)
+    return vars(parser.parse_args())
 
 
 def main():
-    args = parse_args()
+    args = parse_arguments()
     
-    if args['mode'] == 'daemon':
+    if args['mode'] == 'stop':
+        stop_daemon()
+    elif args['mode'] == 'list_themes':
+        list_themes()
+    elif args['mode'] == 'list_sliders':
+        list_sliders()
+    elif args['mode'] == 'test_themes':
+        test_themes(args)
+    elif args['mode'] == 'daemon':
         run_daemon(args)
     else:
         show_once(args)

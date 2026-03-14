@@ -136,6 +136,7 @@ Colors are read from `~/.config/conky/sysinfo_mbcolor.conkyrc`.
 volbar --stop-daemon
 volbar --start-daemon --theme auto
 ```
+Note: The border size of --theme `auto` is hardcoded. (2px)
 
 ### Custom Themes
 
