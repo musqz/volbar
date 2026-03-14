@@ -5,6 +5,8 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 ![volbar](https://img.shields.io/badge/version-1.3.0-blue)
 ![license](https://img.shields.io/badge/license-free-green)
 
+![volbar](images/volbar.jpg)
+
 ## Features
 
 - Minimal & fast GTK3 volume indicator
@@ -204,7 +206,3 @@ man ./volbar.1
 ## License
 
 Free software - do whatever you want with it.
-
-## Author
-
-Written by [musqz](https://github.com/musqz) with AI assistance _(claude)_
