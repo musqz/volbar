@@ -13,7 +13,7 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 - Auto-detects audio backend (PipeWire/PulseAudio/ALSA)
 - Daemon mode with configurable poll interval
 - System tray support
-- Auto theme from Mabox wallpaper colors
+- Auto theme from pywal or Mabox wallpaper colors
 - 13 included themes + CSS customization
 - Multiple slider styles and placements
 
@@ -117,16 +117,21 @@ volbar --show --theme nord
 
 **[user]** ~/.config/volbar/themes/
 
-### Auto Theme (Mabox)
+### Auto Theme
 
-On Mabox Linux, use `--theme auto` to match your wallpaper colors:
+Use `--theme auto` to pull colors from your current wallpaper:
 
 ```bash
 volbar --show --theme auto
 volbar --start-daemon --theme auto
 ```
 
-Colors are read from `~/.config/mabox/jgobthemes/MBcolors.colorrc`.
+Detection order:
+1. **pywal** — reads `~/.cache/wal/colors.json` (Archcraft, standard Arch rices, any pywal setup)
+2. **Mabox conky** — reads `~/.config/conky/sysinfo_mbcolor.conkyrc`
+3. Falls back to the default theme with a message listing what was checked
+
+If neither source is found, volbar tells you exactly which paths it looked for.
 
 **Note:** After changing wallpaper, restart the daemon to pick up new colors:
 
@@ -198,7 +203,8 @@ Replace `wpctl` with `pactl` for PulseAudio.
 |------|-------------|
 | `~/.config/volbar/themes/` | User themes |
 | `/usr/local/share/volbar/themes/` | System themes |
-| `~/.config/mabox/jgobthemes/MBcolors.colorrc` | Mabox wallpaper colors |
+| `~/.cache/wal/colors.json` | pywal wallpaper colors (auto theme) |
+| `~/.config/conky/sysinfo_mbcolor.conkyrc` | Mabox conky colors (auto theme) |
 | `~/.cache/volbar.pid` | Daemon PID file |
 
 ## Help
