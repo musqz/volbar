@@ -12,6 +12,7 @@ import os
 import signal
 import re
 import time
+import json
 from pathlib import Path
 
 
@@ -223,9 +224,9 @@ class AudioControl:
 
 class ThemeLoader:
     """Load CSS from ~/.config/volbar/themes, system themes, or auto-generate"""
-    
-    # Mabox conky config (better contrast colors from wallpaper)
+
     CONKY_PATH = Path.home() / '.config' / 'conky' / 'sysinfo_mbcolor.conkyrc'
+    PYWAL_PATH = Path.home() / '.cache' / 'wal' / 'colors.json'
     
     DEFAULT_CSS = """
 /* Volbar Default Theme */
@@ -285,6 +286,21 @@ label#percentage.muted {
 """
 
     @staticmethod
+    def parse_pywal_colors():
+        """Parse pywal colors.json for wallpaper-derived colors"""
+        if not ThemeLoader.PYWAL_PATH.exists():
+            return None
+        try:
+            data = json.loads(ThemeLoader.PYWAL_PATH.read_text())
+            return {
+                'bg':     data['special']['background'],
+                'fg':     data['special']['foreground'],
+                'accent': data['colors'].get('color2', data['colors'].get('color1')),
+            }
+        except Exception:
+            return None
+
+    @staticmethod
     def parse_conky_colors():
         """Parse Mabox conky config for wallpaper-derived colors"""
         if not ThemeLoader.CONKY_PATH.exists():
@@ -312,19 +328,13 @@ label#percentage.muted {
             return None
 
     @staticmethod
-    def generate_auto_theme():
-        """Generate CSS from Mabox conky wallpaper colors"""
-        c = ThemeLoader.parse_conky_colors()
-        if not c:
-            return None
-        
-        # Extract colors with fallbacks
-        bg = c.get('bg', '#1a1a1a')
-        fg = c.get('fg', '#e0e0e0')
+    def _colors_to_css(c, source):
+        """Generate CSS from a color dict {bg, fg, accent} and a source label"""
+        bg     = c.get('bg', '#1a1a1a')
+        fg     = c.get('fg', '#e0e0e0')
         accent = c.get('accent', c.get('fg', '#ff9900'))
-        muted_color = '#bf616a'
-        
-        return f"""/* Auto-generated from Mabox conky wallpaper colors */
+        muted  = '#bf616a'
+        return f"""/* Auto-generated from {source} colors */
 
 #volbar-container {{
     background-color: {bg};
@@ -342,7 +352,7 @@ label#icon {{
 }}
 
 label#icon.muted {{
-    color: {muted_color};
+    color: {muted};
 }}
 
 label#slider {{
@@ -352,7 +362,7 @@ label#slider {{
 }}
 
 label#slider.muted {{
-    color: {muted_color};
+    color: {muted};
 }}
 
 levelbar#slider trough {{
@@ -375,9 +385,20 @@ label#percentage {{
 }}
 
 label#percentage.muted {{
-    color: {muted_color};
+    color: {muted};
 }}
 """
+
+    @staticmethod
+    def generate_auto_theme():
+        """Try pywal then Mabox conky. Returns (css, source_name) or (None, None)."""
+        c = ThemeLoader.parse_pywal_colors()
+        if c:
+            return ThemeLoader._colors_to_css(c, 'pywal'), 'pywal'
+        c = ThemeLoader.parse_conky_colors()
+        if c:
+            return ThemeLoader._colors_to_css(c, 'Mabox conky'), 'Mabox conky'
+        return None, None
     
     @staticmethod
     def strip_border_radius(css):
@@ -388,13 +409,16 @@ label#percentage.muted {{
     def load(theme_name='default'):
         """Load CSS theme from file, auto-generate, or use default"""
         
-        # Handle 'auto' theme - generate from wallpaper colors
         if theme_name == 'auto':
-            css = ThemeLoader.generate_auto_theme()
+            css, source = ThemeLoader.generate_auto_theme()
             if css:
                 return ThemeLoader.strip_border_radius(css)
-            # Fall back to default if colorrc not available
-            print("⚠ Auto theme: colorrc not found, using default")
+            print(
+                f"⚠ Auto theme: no color source found\n"
+                f"  Checked: pywal ({ThemeLoader.PYWAL_PATH})\n"
+                f"           Mabox conky ({ThemeLoader.CONKY_PATH})\n"
+                f"  Using default theme"
+            )
             return ThemeLoader.strip_border_radius(ThemeLoader.DEFAULT_CSS)
         
         user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
@@ -689,20 +713,25 @@ def list_themes():
     if system_theme_dir.exists():
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
-    # Check if auto theme is available
-    auto_available = ThemeLoader.CONKY_PATH.exists()
-    
+    pywal_available  = ThemeLoader.PYWAL_PATH.exists()
+    conky_available  = ThemeLoader.CONKY_PATH.exists()
+    auto_available   = pywal_available or conky_available
+
     if not themes and not auto_available:
         print("No themes found. Run 'volbar --show' to create default theme.")
         return
-    
+
     themes = sorted(themes)
-    
+
     print("Available themes:")
-    
-    # Show auto theme first if available
+
     if auto_available:
-        print(f"  • {'auto':<20} [wallpaper colors]")
+        sources = []
+        if pywal_available:
+            sources.append('pywal')
+        if conky_available:
+            sources.append('mabox')
+        print(f"  • {'auto':<20} [{'/'.join(sources)} colors]")
     
     for theme in themes:
         if (user_theme_dir / f'{theme}.css').exists():
@@ -729,8 +758,7 @@ def test_themes(args):
     if system_theme_dir.exists():
         themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
     
-    # Add auto theme if available
-    if ThemeLoader.CONKY_PATH.exists():
+    if ThemeLoader.PYWAL_PATH.exists() or ThemeLoader.CONKY_PATH.exists():
         themes.add('auto')
     
     if not themes:
