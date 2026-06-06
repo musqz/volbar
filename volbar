@@ -820,7 +820,8 @@ Options:
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           smooth, blocks, dots, line (default: smooth)
-  --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
+  --theme NAME            Theme name, 'auto', 'wal', or 'mabox' (default: default)
+                          (auto tries: pywal → Mabox conky → default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
   --debug                 Enable debug output
@@ -841,7 +842,7 @@ Options:
 
 Examples:
   volbar --show
-  volbar --show --theme auto
+  volbar --show --theme auto          # pywal or Mabox conky colors
   volbar --list-themes
   volbar --list-sliders
   volbar --show --slider line
