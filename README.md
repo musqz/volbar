@@ -5,7 +5,7 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 ![volbar](https://img.shields.io/badge/version-1.2.0-blue)
 ![license](https://img.shields.io/badge/license-free-green)
 
-![volbar](images/volbar.jpg)
+![volbar](images/volbar.png)
 
 ## Features
 
