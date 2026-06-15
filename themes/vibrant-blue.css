@@ -31,6 +31,21 @@ label#slider.muted {
     color: #ef5350;
 }
 
+levelbar#slider trough {
+    background-color: alpha(#2196f3, 0.25);
+    border-radius: 6px;
+    min-height: 8px;
+}
+
+levelbar#slider block.filled {
+    background-color: #2196f3;
+    border-radius: 6px;
+}
+
+levelbar#slider.muted block.filled {
+    background-color: #ef5350;
+}
+
 label#percentage {
     color: #90caf9;
     font-weight: bold;

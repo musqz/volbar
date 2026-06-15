@@ -59,7 +59,7 @@ volbar --stop-daemon
 |--------|--------|---------|-------------|
 | `--size` | small, medium, large | medium | Window size |
 | `--placement` | center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right | center | Screen position |
-| `--slider` | blocks, dots, line | blocks | Slider style |
+| `--slider` | smooth, blocks, dots, line | smooth | Slider style |
 | `--theme` | theme name or `auto` | default | CSS theme |
 | `--timeout` | milliseconds | 2000 | Display duration |
 | `--poll-interval` | milliseconds | 200 | Daemon check interval |
@@ -68,7 +68,11 @@ volbar --stop-daemon
 
 ### Slider Styles
 
+`smooth` (default) is a continuous, CSS-styled filled bar. The legacy
+character styles render the level with text glyphs:
+
 ```
+smooth   ▰▰▰▰▰▱▱▱▱▱  (continuous filled bar)
 blocks   █████░░░░░
 dots     ●●●●●○○○○○
 line     ━━━━━─────
@@ -142,13 +146,18 @@ Create `~/.config/volbar/themes/mytheme.css`:
 }
 
 label#icon { color: #00ff00; }
-label#slider { color: #00ff00; }
+label#slider { color: #00ff00; }                /* legacy character styles */
 label#percentage { color: #ffffff; }
+
+/* smooth slider (default) */
+levelbar#slider trough { background-color: alpha(#00ff00, 0.25); }
+levelbar#slider block.filled { background-color: #00ff00; }
 
 /* Muted state */
 label#icon.muted,
 label#slider.muted,
 label#percentage.muted { color: #ff0000; }
+levelbar#slider.muted block.filled { background-color: #ff0000; }
 ```
 
 Then use with: `volbar --show --theme mytheme`
