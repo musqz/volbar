@@ -22,7 +22,7 @@ Show volume icon (default: on)
 Show percentage (default: on)
 .TP
 .BR \-\-slider " \fITYPE\fR"
-Slider style: blocks, dots, line (default: blocks)
+Slider style: smooth, blocks, dots, line (default: smooth)
 .TP
 .BR \-\-theme " \fINAME\fR"
 Theme name from ~/.config/volbar/themes/ or 'auto' for Mabox wallpaper colors (default: default)
@@ -73,8 +73,11 @@ Display help message
 Display version information
 .SH SLIDER STYLES
 .TP
+.B smooth
+Continuous filled bar, styled via CSS (default)
+.TP
 .B blocks
-█████░░░░░ (default)
+█████░░░░░
 .TP
 .B dots
 ●●●●●○○○○○
@@ -101,9 +104,13 @@ label#icon { color: #00ff00; }
 label#slider { color: #00ff00; }
 label#percentage { color: #ffffff; }
 
+levelbar#slider trough { background-color: alpha(#00ff00, 0.25); }
+levelbar#slider block.filled { background-color: #00ff00; }
+
 label#icon.muted,
 label#slider.muted,
 label#percentage.muted { color: #ff0000; }
+levelbar#slider.muted block.filled { background-color: #ff0000; }
 .fi
 .RE
 .SH EXAMPLES

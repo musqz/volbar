@@ -260,6 +260,21 @@ label#slider.muted {
     color: #bf616a;
 }
 
+levelbar#slider trough {
+    background-color: rgba(143, 161, 179, 0.25);
+    border-radius: 6px;
+    min-height: 8px;
+}
+
+levelbar#slider block.filled {
+    background-color: #8fa1b3;
+    border-radius: 6px;
+}
+
+levelbar#slider.muted block.filled {
+    background-color: #bf616a;
+}
+
 label#percentage {
     color: #c0c5ce;
 }
@@ -340,6 +355,21 @@ label#slider.muted {{
     color: {muted_color};
 }}
 
+levelbar#slider trough {{
+    background-color: alpha({accent}, 0.25);
+    border-radius: 6px;
+    min-height: 8px;
+}}
+
+levelbar#slider block.filled {{
+    background-color: {accent};
+    border-radius: 6px;
+}}
+
+levelbar#slider.muted block.filled {{
+    background-color: {muted_color};
+}}
+
 label#percentage {{
     color: {fg};
 }}
@@ -399,7 +429,7 @@ class VolumeWindow(Gtk.Window):
     ICONS = {'muted': '🔇', 'low': '🔈', 'medium': '🔉', 'high': '🔊'}
     
     def __init__(self, size='medium', placement='center', show_icon=True, 
-                 show_percent=True, slider='blocks', theme='default', debug=False):
+                 show_percent=True, slider='smooth', theme='default', debug=False):
         super().__init__()
         
         self.size_preset = SIZES[size]
@@ -483,10 +513,24 @@ class VolumeWindow(Gtk.Window):
             box.pack_start(self.icon_label, False, False, 0)
         
         # Slider (center, expands)
-        self.slider_label = Gtk.Label()
-        self.slider_label.set_name('slider')
-        self.slider_label.set_halign(Gtk.Align.CENTER)
-        box.pack_start(self.slider_label, True, True, 0)
+        # 'smooth' uses a native LevelBar (continuous, CSS-styled);
+        # the legacy character styles (blocks/dots/line) use a Label.
+        if self.slider_type == 'smooth':
+            self.slider_widget = Gtk.LevelBar()
+            self.slider_widget.set_name('slider')
+            self.slider_widget.set_mode(Gtk.LevelBarMode.CONTINUOUS)
+            self.slider_widget.set_min_value(0)
+            self.slider_widget.set_max_value(100)
+            self.slider_widget.set_value(0)
+            self.slider_widget.set_size_request(120, -1)
+            self.slider_widget.set_halign(Gtk.Align.CENTER)
+            self.slider_widget.set_valign(Gtk.Align.CENTER)
+            box.pack_start(self.slider_widget, True, True, 0)
+        else:
+            self.slider_widget = Gtk.Label()
+            self.slider_widget.set_name('slider')
+            self.slider_widget.set_halign(Gtk.Align.CENTER)
+            box.pack_start(self.slider_widget, True, True, 0)
         
         # Percent (right)
         if self.show_percent_flag:
@@ -571,14 +615,17 @@ class VolumeWindow(Gtk.Window):
             else:
                 ctx.remove_class('muted')
         
-        blocks = volume // 10
-        slider_func = SLIDERS.get(self.slider_type, SLIDERS['blocks'])
-        slider = slider_func(blocks)
-        
-        self.slider_label.set_markup(
-            f'<span font_desc="monospace {font_size}" letter_spacing="0">{slider}</span>'
-        )
-        ctx = self.slider_label.get_style_context()
+        if self.slider_type == 'smooth':
+            # Continuous fill at full 0-100 resolution
+            self.slider_widget.set_value(volume)
+        else:
+            blocks = volume // 10
+            slider_func = SLIDERS.get(self.slider_type, SLIDERS['blocks'])
+            slider = slider_func(blocks)
+            self.slider_widget.set_markup(
+                f'<span font_desc="monospace {font_size}" letter_spacing="0">{slider}</span>'
+            )
+        ctx = self.slider_widget.get_style_context()
         if muted:
             ctx.add_class('muted')
         else:
@@ -614,14 +661,16 @@ def print_version():
 def list_sliders():
     """List available slider styles"""
     print("Available slider styles:\n")
-    
+
     volume = 50
     blocks = volume // 10
-    
+
+    print(f"  {'smooth':<15} (continuous filled bar — default)")
+    print("  ── legacy character styles ──")
     for name, slider_func in SLIDERS.items():
         slider = slider_func(blocks)
         print(f"  {name:<15} {slider}")
-    
+
     print(f"\nUsage: volbar --show --slider SLIDER_NAME")
     print(f"Example: volbar --show --slider line")
 
@@ -709,7 +758,7 @@ def test_themes(args):
             placement=args.get('placement', 'center'),
             show_icon=args.get('icon', True),
             show_percent=args.get('percent', True),
-            slider=args.get('slider', 'blocks'),
+            slider=args.get('slider', 'smooth'),
             theme=theme,
             debug=args.get('debug', False)
         )
@@ -742,7 +791,7 @@ Options:
                            
   --icon on|off           Show volume icon (default: on)
   --percent on|off        Show percentage (default: on)
-  --slider TYPE           blocks, dots, line (default: blocks)
+  --slider TYPE           smooth, blocks, dots, line (default: smooth)
   --theme NAME            Theme name or 'auto' for wallpaper colors (default: default)
   --timeout MS            Display timeout in milliseconds (default: 2000)
   --poll-interval MS      Volume check interval for daemon (default: 200)
@@ -782,7 +831,7 @@ def parse_args():
         'placement': 'center',
         'icon': True,
         'percent': True,
-        'slider': 'blocks',
+        'slider': 'smooth',
         'theme': 'default',
         'timeout': 2000,
         'poll_interval': 200,

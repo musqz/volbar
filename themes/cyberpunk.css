@@ -33,6 +33,21 @@ label#slider.muted {
     text-shadow: 0 0 8px rgba(255, 0, 85, 0.7);
 }
 
+levelbar#slider trough {
+    background-color: alpha(#00ffff, 0.25);
+    border-radius: 6px;
+    min-height: 8px;
+}
+
+levelbar#slider block.filled {
+    background-color: #00ffff;
+    border-radius: 6px;
+}
+
+levelbar#slider.muted block.filled {
+    background-color: #ff0055;
+}
+
 label#percentage {
     color: #ffff00;
     text-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
