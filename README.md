@@ -133,6 +133,15 @@ Detection order:
 
 If neither source is found, volbar tells you exactly which paths it looked for.
 
+To force a specific source instead of the auto-detect chain, use `--theme wal` or `--theme mabox`:
+
+```bash
+volbar --show --theme wal      # force pywal colors, no fallback to mabox
+volbar --show --theme mabox    # force Mabox conky colors, no fallback to pywal
+```
+
+Each forced mode still falls back to the default theme (with a warning) if its source isn't found — it just won't try the other backend first.
+
 **Note:** After changing wallpaper, restart the daemon to pick up new colors:
 
 ```bash
