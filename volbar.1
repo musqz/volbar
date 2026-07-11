@@ -98,6 +98,16 @@ Forces pywal colors only; falls back to the default theme (with a warning) if co
 .B mabox
 Forces Mabox conky colors only; falls back to the default theme (with a warning) if the conky file is missing.
 .PP
+\fBTip:\fR pywal's colors.json is a cache, and volbar only reads it \- it never regenerates it. Changing your wallpaper does not update
+.B wal
+or
+.B auto
+theming by itself. Re-run
+.B wal \-i /path/to/wallpaper
+manually after each change, or wire it into your wallpaper-change script/hook. We deliberately avoid an automatic hook in volbar itself, since that would also re-theme on every slideshow rotation. The same caveat applies to
+.B mabox
+if Mabox's own wall2themes auto-theming is disabled.
+.PP
 Example custom theme:
 .PP
 .RS
