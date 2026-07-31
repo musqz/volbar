@@ -25,7 +25,7 @@ Show percentage (default: on)
 Slider style: smooth, blocks, dots, line (default: smooth)
 .TP
 .BR \-\-theme " \fINAME\fR"
-Theme name from ~/.config/volbar/themes/, or one of the wallpaper-color themes: 'auto' (tries pywal, then Mabox conky), 'wal' (force pywal), 'mabox' (force Mabox conky) (default: default)
+Theme name from ~/.config/volbar/themes/, or 'auto' for Mabox conky wallpaper colors (default: default)
 .TP
 .BR \-\-timeout " \fIMS\fR"
 Display timeout in milliseconds (default: 2000)
@@ -87,26 +87,13 @@ Continuous filled bar, styled via CSS (default)
 .SH THEMES
 Themes are CSS files in ~/.config/volbar/themes/ or /usr/local/share/volbar/themes/.
 .PP
-Three special theme names generate a CSS theme from wallpaper-derived colors instead of reading a file:
-.TP
+The special theme name
 .B auto
-Tries pywal (~/.cache/wal/colors.json) first, then Mabox conky (~/.config/conky/sysinfo_mbcolor.conkyrc), falling back to the default theme if neither is found.
-.TP
-.B wal
-Forces pywal colors only; falls back to the default theme (with a warning) if colors.json is missing.
-.TP
-.B mabox
-Forces Mabox conky colors only; falls back to the default theme (with a warning) if the conky file is missing.
+generates a CSS theme from Mabox conky wallpaper colors (~/.config/conky/sysinfo_mbcolor.conkyrc) instead of reading a file, falling back to the default theme (with a warning) if the conky file is missing.
 .PP
-\fBTip:\fR pywal's colors.json is a cache, and volbar only reads it \- it never regenerates it. Changing your wallpaper does not update
-.B wal
-or
+\fBTip:\fR
 .B auto
-theming by itself. Re-run
-.B wal \-i /path/to/wallpaper
-manually after each change, or wire it into your wallpaper-change script/hook. We deliberately avoid an automatic hook in volbar itself, since that would also re-theme on every slideshow rotation. The same caveat applies to
-.B mabox
-if Mabox's own wall2themes auto-theming is disabled.
+theming does not refresh itself on wallpaper change. If Mabox's own wall2themes auto-theming is disabled, re-run it manually (or restart the daemon) after each wallpaper change to pick up new colors.
 .PP
 Example custom theme:
 .PP
@@ -136,13 +123,7 @@ levelbar#slider.muted block.filled { background-color: #ff0000; }
 Show volume bar once
 .TP
 .B volbar \-\-show \-\-theme auto
-Use wallpaper colors (pywal, then Mabox conky)
-.TP
-.B volbar \-\-show \-\-theme wal
-Force pywal colors
-.TP
-.B volbar \-\-show \-\-theme mabox
-Force Mabox conky colors
+Use Mabox conky wallpaper colors
 .TP
 .B volbar \-\-show \-\-slider line \-\-placement top
 Line slider at top
@@ -163,11 +144,8 @@ User themes
 .I /usr/local/share/volbar/themes/
 System themes
 .TP
-.I ~/.cache/wal/colors.json
-Pywal wallpaper colors (for auto/wal themes)
-.TP
 .I ~/.config/conky/sysinfo_mbcolor.conkyrc
-Mabox conky wallpaper colors (for auto/mabox themes)
+Mabox conky wallpaper colors (for auto theme)
 .TP
 .I ~/.cache/volbar.pid
 Daemon PID file
