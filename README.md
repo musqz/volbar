@@ -13,7 +13,7 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 - Auto-detects audio backend (PipeWire/PulseAudio/ALSA)
 - Daemon mode with configurable poll interval
 - System tray support
-- Auto theme from pywal or Mabox wallpaper colors
+- Auto theme from Mabox wallpaper colors
 - 13 included themes + CSS customization
 - Multiple slider styles and placements
 
@@ -119,28 +119,16 @@ volbar --show --theme nord
 
 ### Auto Theme
 
-Use `--theme auto` to pull colors from your current wallpaper:
+Use `--theme auto` to pull colors from Mabox's conky wallpaper-color config
+(`~/.config/conky/sysinfo_mbcolor.conkyrc`):
 
 ```bash
 volbar --show --theme auto
 volbar --start-daemon --theme auto
 ```
 
-Detection order:
-1. **pywal** — reads `~/.cache/wal/colors.json` (Archcraft, standard Arch rices, any pywal setup)
-2. **Mabox conky** — reads `~/.config/conky/sysinfo_mbcolor.conkyrc`
-3. Falls back to the default theme with a message listing what was checked
-
-If neither source is found, volbar tells you exactly which paths it looked for.
-
-To force a specific source instead of the auto-detect chain, use `--theme wal` or `--theme mabox`:
-
-```bash
-volbar --show --theme wal      # force pywal colors, no fallback to mabox
-volbar --show --theme mabox    # force Mabox conky colors, no fallback to pywal
-```
-
-Each forced mode still falls back to the default theme (with a warning) if its source isn't found — it just won't try the other backend first.
+If the conky file isn't found, volbar falls back to the default theme with a
+warning naming the path it checked.
 
 **Note:** After changing wallpaper, restart the daemon to pick up new colors:
 
@@ -212,7 +200,6 @@ Replace `wpctl` with `pactl` for PulseAudio.
 |------|-------------|
 | `~/.config/volbar/themes/` | User themes |
 | `/usr/local/share/volbar/themes/` | System themes |
-| `~/.cache/wal/colors.json` | pywal wallpaper colors (auto theme) |
 | `~/.config/conky/sysinfo_mbcolor.conkyrc` | Mabox conky colors (auto theme) |
 | `~/.cache/volbar.pid` | Daemon PID file |
 
