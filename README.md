@@ -30,9 +30,6 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 ## Requirements
 
 ```bash
-# Debian/Ubuntu
-sudo apt install python3-gi gir1.2-gtk-3.0
-
 # Arch Linux
 sudo pacman -S python-gobject gtk3
 ```
