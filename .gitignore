@@ -3,3 +3,4 @@ __pycache__/
 *.pyo
 CLAUDE.md
 claude.md
+.vscode/

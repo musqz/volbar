@@ -16,19 +16,18 @@ import time
 from pathlib import Path
 
 
-VERSION = "1.2.0"
+# Replaced with the contents of version.txt by install.sh
+VERSION = "@@VERSION@@"
+
 
 def get_version():
-    """Get version from version.txt or fallback to hardcoded"""
-    version_paths = [
-        Path(__file__).parent / 'version.txt',
-        Path('/usr/local/share/volbar/version.txt'),
-        Path('/usr/share/volbar/version.txt'),
-    ]
-    for p in version_paths:
-        if p.exists():
-            return p.read_text().strip()
-    return VERSION
+    """Installed copy has VERSION filled in; a repo checkout reads version.txt"""
+    if '@@' not in VERSION:
+        return VERSION
+    version_file = Path(__file__).resolve().parent / 'version.txt'
+    if version_file.exists():
+        return version_file.read_text().strip()
+    return 'unknown'
 
 
 # ============================================================================
@@ -396,8 +395,16 @@ label#percentage.muted {{
 
     @staticmethod
     def strip_border_radius(css):
-        """Remove border-radius from CSS to let picom handle corners"""
-        return re.sub(r'border-radius\s*:\s*[^;]+;', '', css)
+        """Remove window/container border-radius so picom handles corners.
+
+        The smooth slider's own rounding (levelbar rules) is kept.
+        """
+        def strip_rule(match):
+            selector, body = match.group(1), match.group(2)
+            if 'levelbar' in selector:
+                return match.group(0)
+            return selector + '{' + re.sub(r'border-radius\s*:\s*[^;]+;', '', body) + '}'
+        return re.sub(r'([^{}]*)\{([^{}]*)\}', strip_rule, css)
 
     @staticmethod
     def _load_or_default(css, warning):
