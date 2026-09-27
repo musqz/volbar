@@ -47,6 +47,15 @@ Custom prefix:
 sudo ./install.sh --prefix /usr
 ```
 
+Uninstall (use the same `--prefix` you installed with):
+```bash
+sudo ./install.sh --uninstall
+sudo ./install.sh --uninstall --prefix /usr
+```
+
+This stops a running daemon and removes the script, man page and system
+themes. Your own themes in `~/.config/volbar/` are kept.
+
 ### Arch / Mabox package
 
 Build and install with pacman from the included `PKGBUILD`:
