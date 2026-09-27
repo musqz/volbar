@@ -20,26 +20,98 @@ echo ""
 
 # Parse arguments
 PREFIX="/usr/local"
-for arg in "$@"; do
-    case $arg in
+UNINSTALL=false
+while [ $# -gt 0 ]; do
+    case $1 in
         --prefix=*)
-            PREFIX="${arg#*=}"
+            PREFIX="${1#*=}"
             shift
             ;;
         --prefix)
+            if [ -z "$2" ]; then
+                echo "✗ --prefix needs a directory"
+                exit 1
+            fi
             PREFIX="$2"
             shift 2
+            ;;
+        --uninstall)
+            UNINSTALL=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--prefix DIR] [--uninstall]"
+            echo ""
+            echo "  --prefix DIR   Install location (default: /usr/local)"
+            echo "  --uninstall    Remove volbar from the prefix instead of installing"
+            exit 0
+            ;;
+        *)
+            echo "✗ Unknown option: $1 (see $0 --help)"
+            exit 1
             ;;
     esac
 done
 
-# Check for root if installing to system directories
+if [ -z "$PREFIX" ]; then
+    echo "✗ --prefix must not be empty"
+    exit 1
+fi
+
+# Installation paths
+BIN_DIR="$PREFIX/bin"
+MAN_DIR="$PREFIX/share/man/man1"
+DATA_DIR="$PREFIX/share/volbar"
+THEME_DIR="$DATA_DIR/themes"
+
+# Check for root if (un)installing in system directories
 if [[ "$PREFIX" == "/usr" || "$PREFIX" == "/usr/local" ]]; then
     if [ "$EUID" -ne 0 ]; then
-        echo "✗ System install requires root privileges"
-        echo "  Run: sudo $0 --prefix $PREFIX"
+        echo "✗ System (un)install requires root privileges"
+        echo "  Run: sudo $0 --prefix $PREFIX$($UNINSTALL && echo " --uninstall")"
         exit 1
     fi
+fi
+
+if $UNINSTALL; then
+    echo "Uninstall prefix: $PREFIX"
+    echo ""
+
+    # A pacman-installed volbar must be removed with pacman
+    if command -v pacman &> /dev/null && pacman -Qqo "$BIN_DIR/volbar" &> /dev/null; then
+        echo "✗ $BIN_DIR/volbar belongs to the pacman package '$(pacman -Qqo "$BIN_DIR/volbar")'"
+        echo "  Remove it with: sudo pacman -R volbar"
+        exit 1
+    fi
+
+    if [ ! -e "$BIN_DIR/volbar" ] && [ ! -d "$DATA_DIR" ] && [ ! -e "$MAN_DIR/volbar.1" ]; then
+        echo "✗ volbar is not installed in $PREFIX"
+        exit 1
+    fi
+
+    # Stop running daemons first (SIGTERM lets them remove their PID file)
+    DAEMON_PATTERN="^[^ ]*python[^ ]* $BIN_DIR/volbar .*--start-daemon"
+    if pkill -TERM -f "$DAEMON_PATTERN"; then
+        echo "→ Stopped running volbar daemon"
+        sleep 0.5
+    fi
+
+    echo "→ Removing volbar..."
+    for path in "$BIN_DIR/volbar" "$MAN_DIR/volbar.1" "$DATA_DIR"; do
+        if [ -e "$path" ]; then
+            rm -rf "$path"
+            echo "  removed $path"
+        fi
+    done
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  ✓ Uninstall complete!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Your own themes in ~/.config/volbar/ were kept."
+    echo "Delete them by hand if you no longer need them."
+    exit 0
 fi
 
 echo "Installation prefix: $PREFIX"
@@ -79,11 +151,6 @@ if [ "$BACKEND_FOUND" = false ]; then
 fi
 
 echo ""
-
-# Set installation paths
-BIN_DIR="$PREFIX/bin"
-MAN_DIR="$PREFIX/share/man/man1"
-THEME_DIR="$PREFIX/share/volbar/themes"
 
 # Check if required files exist
 if [ ! -f "$SCRIPT_DIR/volbar" ]; then

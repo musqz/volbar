@@ -8,6 +8,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - `CHANGELOG.md` and an Arch/Mabox `PKGBUILD` in `packaging/`.
+- `./install.sh --uninstall` (honours `--prefix`): stops a running daemon
+  and removes the script, man page and system themes. Refuses when volbar
+  was installed by pacman.
+- `./install.sh --help`.
+
+### Fixed
+- `install.sh` argument parsing: `--prefix DIR` works in any position,
+  and unknown options are reported instead of ignored.
 
 ## [1.3.0] - 2026-09-27
 
