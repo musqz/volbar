@@ -84,7 +84,6 @@ echo ""
 BIN_DIR="$PREFIX/bin"
 MAN_DIR="$PREFIX/share/man/man1"
 THEME_DIR="$PREFIX/share/volbar/themes"
-DATA_DIR="$PREFIX/share/volbar"
 
 # Check if required files exist
 if [ ! -f "$SCRIPT_DIR/volbar" ]; then
@@ -97,19 +96,12 @@ echo "→ Creating directories..."
 mkdir -p "$BIN_DIR"
 mkdir -p "$MAN_DIR"
 mkdir -p "$THEME_DIR"
-mkdir -p "$DATA_DIR"
 
-# Install main script
+# Install main script (replace @@VERSION@@ placeholder)
 echo "→ Installing volbar..."
-cp "$SCRIPT_DIR/volbar" "$BIN_DIR/volbar"
+sed "s/@@VERSION@@/$VERSION/g" "$SCRIPT_DIR/volbar" > "$BIN_DIR/volbar"
 chmod +x "$BIN_DIR/volbar"
 echo "  $BIN_DIR/volbar"
-
-# Install version.txt
-if [ -f "$SCRIPT_DIR/version.txt" ]; then
-    cp "$SCRIPT_DIR/version.txt" "$DATA_DIR/version.txt"
-    echo "  $DATA_DIR/version.txt"
-fi
 
 # Install man page (replace @@VERSION@@ placeholder)
 if [ -f "$SCRIPT_DIR/volbar.1" ]; then
