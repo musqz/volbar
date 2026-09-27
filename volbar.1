@@ -85,7 +85,7 @@ Continuous filled bar, styled via CSS (default)
 .B line
 ━━━━━─────
 .SH THEMES
-Themes are CSS files in ~/.config/volbar/themes/ or /usr/local/share/volbar/themes/.
+Themes are CSS files in ~/.config/volbar/themes/, /usr/local/share/volbar/themes/ or /usr/share/volbar/themes/.
 .PP
 The special theme name
 .B auto
@@ -93,7 +93,7 @@ generates a CSS theme from Mabox conky wallpaper colors (~/.config/conky/sysinfo
 .PP
 \fBTip:\fR
 .B auto
-theming does not refresh itself on wallpaper change. If Mabox's own wall2themes auto-theming is disabled, re-run it manually (or restart the daemon) after each wallpaper change to pick up new colors.
+follows the conky file: the daemon reloads its colors whenever Mabox's Colorizer rewrites it after a wallpaper change, so no restart is needed.
 .PP
 Example custom theme:
 .PP
@@ -141,7 +141,7 @@ Stop daemon
 .I ~/.config/volbar/themes/
 User themes
 .TP
-.I /usr/local/share/volbar/themes/
+.I /usr/local/share/volbar/themes/, /usr/share/volbar/themes/
 System themes
 .TP
 .I ~/.config/conky/sysinfo_mbcolor.conkyrc

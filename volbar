@@ -5,7 +5,8 @@ Volbar - Simple X11 volume bar. Tiny footprint, highly customizable.
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk, GLib, Gio
+import shutil
 import subprocess
 import sys
 import os
@@ -119,6 +120,25 @@ PLACEMENTS = {
     'bottom-right': lambda w, h, gw, gh: (gw - w - 50, gh - h - 50),
 }
 
+# User themes first, then system themes for both common install prefixes
+USER_THEME_DIR = Path.home() / '.config' / 'volbar' / 'themes'
+SYSTEM_THEME_DIRS = [
+    Path('/usr/local/share/volbar/themes'),
+    Path('/usr/share/volbar/themes'),
+]
+
+
+def find_themes():
+    """Return {theme_name: location} for all installed CSS themes"""
+    themes = {}
+    for d in SYSTEM_THEME_DIRS:
+        if d.exists():
+            themes.update({f.stem: 'system' for f in d.glob('*.css')})
+    if USER_THEME_DIR.exists():
+        themes.update({f.stem: 'user' for f in USER_THEME_DIR.glob('*.css')})
+    return themes
+
+
 SLIDERS = {
     'blocks': lambda n: '█' * n + '░' * (10 - n),
     'dots':   lambda n: '●' * n + '○' * (10 - n),
@@ -142,7 +162,7 @@ class AudioBackend:
         ]
         
         for cmd, handler in backends:
-            if subprocess.run(['which', cmd], capture_output=True).returncode == 0:
+            if shutil.which(cmd):
                 return handler
         return None
     
@@ -191,30 +211,33 @@ class AudioBackend:
 
 
 class AudioControl:
-    @staticmethod
-    def volume_up(step):
-        volume, muted = AudioBackend.detect()()
-        new_vol = min(volume + step, 100)
-        subprocess.run(
-            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+    """Change volume/mute using the same backend that reads it"""
+
+    SET_VOLUME = {
+        AudioBackend.wpctl:  lambda v: ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{v}%'],
+        AudioBackend.pactl:  lambda v: ['pactl', 'set-sink-volume', '@DEFAULT_SINK@', f'{v}%'],
+        AudioBackend.amixer: lambda v: ['amixer', '-q', 'set', 'Master', f'{v}%'],
+    }
+    TOGGLE_MUTE = {
+        AudioBackend.wpctl:  ['wpctl', 'set-mute', '@DEFAULT_SINK@', 'toggle'],
+        AudioBackend.pactl:  ['pactl', 'set-sink-mute', '@DEFAULT_SINK@', 'toggle'],
+        AudioBackend.amixer: ['amixer', '-q', 'set', 'Master', 'toggle'],
+    }
+
+    def __init__(self, backend):
+        self.backend = backend
 
     @staticmethod
-    def volume_down(step):
-        volume, muted = AudioBackend.detect()()
-        new_vol = max(volume - step, 0)
-        subprocess.run(
-            ['wpctl', 'set-volume', '@DEFAULT_SINK@', f'{new_vol}%'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+    def _run(cmd):
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    @staticmethod
-    def toggle_mute():
-        subprocess.run(
-            ['wpctl', 'set-mute', '@DEFAULT_SINK@', 'toggle'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+    def change_volume(self, delta):
+        volume, _ = self.backend()
+        new_vol = max(0, min(volume + delta, 100))
+        self._run(self.SET_VOLUME[self.backend](new_vol))
+
+    def toggle_mute(self):
+        self._run(self.TOGGLE_MUTE[self.backend])
 
 
 # ============================================================================
@@ -388,18 +411,13 @@ label#percentage.muted {{
     def load(theme_name='default'):
         """Load CSS theme from file, auto-generate, or use default"""
 
-        user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
-        user_css_file = user_theme_dir / f'{theme_name}.css'
-
-        system_theme_dir = Path('/usr/local/share/volbar/themes')
-        system_css_file = system_theme_dir / f'{theme_name}.css'
+        user_css_file = USER_THEME_DIR / f'{theme_name}.css'
 
         # A real file named auto.css always wins over the generated
         # wallpaper-color theme of the same name.
-        if user_css_file.exists():
-            return ThemeLoader.strip_border_radius(user_css_file.read_text())
-        if system_css_file.exists():
-            return ThemeLoader.strip_border_radius(system_css_file.read_text())
+        for css_file in [user_css_file] + [d / f'{theme_name}.css' for d in SYSTEM_THEME_DIRS]:
+            if css_file.exists():
+                return ThemeLoader.strip_border_radius(css_file.read_text())
 
         if theme_name == 'auto':
             c = ThemeLoader.parse_conky_colors()
@@ -409,9 +427,9 @@ label#percentage.muted {{
                 f"  Using default theme"
             )
 
-        user_theme_dir.mkdir(parents=True, exist_ok=True)
         css_content = ThemeLoader.DEFAULT_CSS
         if theme_name == 'default':
+            USER_THEME_DIR.mkdir(parents=True, exist_ok=True)
             user_css_file.write_text(css_content)
             print(f"Created default theme: {user_css_file}")
         else:
@@ -442,6 +460,7 @@ class VolumeWindow(Gtk.Window):
         self.debug = debug
         self.positioned = False
         self.first_update = True
+        self.css_provider = None
         
         self.load_theme(theme)
         self.setup_window()
@@ -454,8 +473,7 @@ class VolumeWindow(Gtk.Window):
         self.set_skip_taskbar_hint(True)
         self.set_skip_pager_hint(True)
         self.set_keep_above(True)
-        self.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
-        
+
         # CRITICAL: Set to POPUP type for fullscreen compatibility
         # This prevents other panels from showing
         self.set_type_hint(Gdk.WindowTypeHint.POPUP_MENU)
@@ -546,19 +564,19 @@ class VolumeWindow(Gtk.Window):
         self.add(container)
     
     def load_theme(self, theme_name):
-        """Load and apply CSS theme"""
+        """Load and apply CSS theme, replacing any previously loaded one"""
         css = ThemeLoader.load(theme_name)
+        screen = Gdk.Screen.get_default()
         
         provider = Gtk.CssProvider()
         try:
             provider.load_from_data(css.encode())
-            style_context = self.get_style_context()
-            style_context.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-            
-            screen = Gdk.Screen.get_default()
+            if self.css_provider:
+                Gtk.StyleContext.remove_provider_for_screen(screen, self.css_provider)
             Gtk.StyleContext.add_provider_for_screen(
                 screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
             )
+            self.css_provider = provider
             if self.debug:
                 print(f"✓ Theme loaded: {theme_name}")
         except Exception as e:
@@ -679,56 +697,37 @@ def list_sliders():
 
 def list_themes():
     """List available themes"""
-    user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
-    system_theme_dir = Path('/usr/local/share/volbar/themes')
-    
-    themes = set()
-    
-    if user_theme_dir.exists():
-        # Exclude dotfiles (like .auto)
-        themes.update([f.stem for f in user_theme_dir.glob('*.css') if not f.name.startswith('.')])
-    
-    if system_theme_dir.exists():
-        themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
-    
+    themes = find_themes()
     conky_available = ThemeLoader.CONKY_PATH.exists()
 
     if not themes and not conky_available:
         print("No themes found. Run 'volbar --show' to create default theme.")
         return
 
-    themes = sorted(themes)
-
     print("Available themes:")
 
     if conky_available:
         print(f"  • {'auto':<20} [mabox conky colors]")
 
-    for theme in themes:
-        if (user_theme_dir / f'{theme}.css').exists():
-            location = "user"
-        else:
-            location = "system"
+    for theme, location in sorted(themes.items()):
         print(f"  • {theme:<20} [{location}]")
 
-    print(f"\nUser themes:   {user_theme_dir}")
-    print(f"System themes: {system_theme_dir}")
+    print(f"\nUser themes:   {USER_THEME_DIR}")
+    print(f"System themes: {', '.join(str(d) for d in SYSTEM_THEME_DIRS)}")
     print(f"\nUsage: volbar --show --theme THEMENAME")
     if conky_available:
         print(f"       volbar --show --theme auto  (uses Mabox conky wallpaper colors)")
 
 
+def quit_main_loop():
+    """GLib timeout callback: stop the main loop once (never repeats)"""
+    Gtk.main_quit()
+    return False
+
+
 def test_themes(args):
     """Test all available themes"""
-    user_theme_dir = Path.home() / '.config' / 'volbar' / 'themes'
-    system_theme_dir = Path('/usr/local/share/volbar/themes')
-    
-    themes = set()
-    if user_theme_dir.exists():
-        themes.update([f.stem for f in user_theme_dir.glob('*.css') if not f.name.startswith('.')])
-    if system_theme_dir.exists():
-        themes.update([f.stem for f in system_theme_dir.glob('*.css') if not f.name.startswith('.')])
-    
+    themes = set(find_themes())
     if ThemeLoader.CONKY_PATH.exists():
         themes.add('auto')
 
@@ -749,31 +748,32 @@ def test_themes(args):
     
     volume, muted = backend()
     
+    window = VolumeWindow(
+        size=args.get('size', 'large'),
+        placement=args.get('placement', 'center'),
+        show_icon=args.get('icon', True),
+        show_percent=args.get('percent', True),
+        slider=args.get('slider', 'smooth'),
+        theme=themes[0],
+        debug=args.get('debug', False)
+    )
+    
     for theme in themes:
         print(f"Showing: {theme}")
         
-        window = VolumeWindow(
-            size=args.get('size', 'large'),
-            placement=args.get('placement', 'center'),
-            show_icon=args.get('icon', True),
-            show_percent=args.get('percent', True),
-            slider=args.get('slider', 'smooth'),
-            theme=theme,
-            debug=args.get('debug', False)
-        )
-        
-        window.update(volume, muted)
+        window.load_theme(theme)
         window.show_all()
+        window.update(volume, muted)
         
-        GLib.timeout_add(3000, lambda: (window.hide(), Gtk.main_quit()))
+        GLib.timeout_add(3000, quit_main_loop)
         
         try:
             Gtk.main()
         except KeyboardInterrupt:
             print("\nStopped.")
             break
-        
-        time.sleep(0.5)
+    
+    window.destroy()
 
 
 def print_help():
@@ -843,6 +843,13 @@ def parse_args():
 
     }
     
+    def int_arg(i):
+        try:
+            return int(sys.argv[i + 1])
+        except ValueError:
+            print(f"✗ {sys.argv[i]} expects a number, got '{sys.argv[i + 1]}'")
+            sys.exit(1)
+
     i = 1
     while i < len(sys.argv):
         arg = sys.argv[i]
@@ -890,16 +897,16 @@ def parse_args():
             args['theme'] = sys.argv[i + 1]
             i += 2
         elif arg == '--timeout' and i + 1 < len(sys.argv):
-            args['timeout'] = int(sys.argv[i + 1])
+            args['timeout'] = int_arg(i)
             i += 2
         elif arg == '--poll-interval' and i + 1 < len(sys.argv):
-            args['poll_interval'] = int(sys.argv[i + 1])
+            args['poll_interval'] = int_arg(i)
             i += 2
         elif arg == '--systray-icon':
             args['systray'] = True
             i += 1
         elif arg == '--tray-step' and i + 1 < len(sys.argv):
-            args['tray_step'] = int(sys.argv[i + 1])
+            args['tray_step'] = int_arg(i)
             i += 2
         elif arg == '--mixer' and i + 1 < len(sys.argv):
             args['mixer'] = sys.argv[i + 1]
@@ -909,6 +916,12 @@ def parse_args():
             i += 1
         else:
             print(f"Unknown option: {arg}")
+            sys.exit(1)
+    
+    for key, choices in (('size', SIZES), ('placement', PLACEMENTS),
+                         ('slider', ['smooth', *SLIDERS])):
+        if args[key] not in choices:
+            print(f"✗ Invalid --{key} '{args[key]}' (choose from: {', '.join(choices)})")
             sys.exit(1)
     
     return args
@@ -943,13 +956,13 @@ def show_once(args):
     
     window.update(volume, muted)
     
-    GLib.timeout_add(args['timeout'], lambda: (window.hide(), Gtk.main_quit()))
+    GLib.timeout_add(args['timeout'], quit_main_loop)
     
     try:
         Gtk.main()
     except KeyboardInterrupt:
-        window.hide()
-        sys.exit(0)
+        pass
+    window.hide()
 
 
 class TrayIcon:
@@ -962,6 +975,7 @@ class TrayIcon:
 
     def __init__(self, backend, window, step, mixer, cleanup_callback=None):
         self.backend = backend
+        self.control = AudioControl(backend)
         self.window = window
         self.step = step
         self.mixer = mixer
@@ -1024,9 +1038,9 @@ class TrayIcon:
 
     def on_scroll(self, icon, event):
         if event.direction == Gdk.ScrollDirection.UP:
-            AudioControl.volume_up(self.step)
+            self.control.change_volume(self.step)
         elif event.direction == Gdk.ScrollDirection.DOWN:
-            AudioControl.volume_down(self.step)
+            self.control.change_volume(-self.step)
 
         GLib.timeout_add(50, self.show_osd)
 
@@ -1034,7 +1048,7 @@ class TrayIcon:
         if event.button == 3:
             self.menu.popup_at_pointer(event)
         elif event.button in (1, 2):
-            AudioControl.toggle_mute()
+            self.control.toggle_mute()
             GLib.timeout_add(50, self.show_osd)
 
     def show_osd(self):
@@ -1158,11 +1172,30 @@ def run_daemon(args):
 
             if hide_timeout:
                 GLib.source_remove(hide_timeout)
-            hide_timeout = GLib.timeout_add(
-                args['timeout'], lambda: window.hide()
-            )
+            hide_timeout = GLib.timeout_add(args['timeout'], hide_window)
 
         return True
+
+    def hide_window():
+        nonlocal hide_timeout
+        hide_timeout = None
+        window.hide()
+        return False
+
+    # Mabox's Colorizer rewrites the conky file when the wallpaper colors
+    # change; follow it so the auto theme never needs a daemon restart.
+    conky_monitor = None
+    if args['theme'] == 'auto':
+        def on_conky_changed(monitor, file, other, event):
+            if event in (Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+                         Gio.FileMonitorEvent.CREATED):
+                if args['debug']:
+                    print("Conky colors changed, reloading auto theme")
+                window.load_theme('auto')
+
+        conky_monitor = Gio.File.new_for_path(str(ThemeLoader.CONKY_PATH)) \
+            .monitor_file(Gio.FileMonitorFlags.NONE, None)
+        conky_monitor.connect('changed', on_conky_changed)
 
     # Use only GLib.unix_signal_add for GTK-safe signal handling
     GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, cleanup)
