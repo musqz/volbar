@@ -120,7 +120,7 @@ volbar --test-themes
 volbar --show --theme nord
 ```
 
-**[system]** /usr/local/share/volbar/themes/
+**[system]** /usr/local/share/volbar/themes/ or /usr/share/volbar/themes/
 
 **[user]** ~/.config/volbar/themes/
 
@@ -137,12 +137,9 @@ volbar --start-daemon --theme auto
 If the conky file isn't found, volbar falls back to the default theme with a
 warning naming the path it checked.
 
-**Note:** After changing wallpaper, restart the daemon to pick up new colors:
-
-```bash
-volbar --stop-daemon
-volbar --start-daemon --theme auto
-```
+The daemon watches the conky file, so when Mabox's Colorizer updates it after
+a wallpaper change the bar picks up the new colors automatically — no restart
+needed. (`--show` reads the colors fresh on every run.)
 
 ### Custom Themes
 
@@ -206,7 +203,7 @@ Replace `wpctl` with `pactl` for PulseAudio.
 | Path | Description |
 |------|-------------|
 | `~/.config/volbar/themes/` | User themes |
-| `/usr/local/share/volbar/themes/` | System themes |
+| `/usr/local/share/volbar/themes/`, `/usr/share/volbar/themes/` | System themes |
 | `~/.config/conky/sysinfo_mbcolor.conkyrc` | Mabox conky colors (auto theme) |
 | `~/.cache/volbar.pid` | Daemon PID file |
 
