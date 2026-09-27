@@ -15,7 +15,7 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 ![version](https://img.shields.io/github/v/tag/musqz/volbar?label=version)
 ![license](https://img.shields.io/badge/license-free-green)
 
-![volbar](images/volbar.png)
+<img width="230" height="62" alt="Image" src="https://github.com/user-attachments/assets/ee698170-df4e-4dac-9673-d124205c7f29" />
 
 ## Features
 
