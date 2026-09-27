@@ -47,6 +47,17 @@ Custom prefix:
 sudo ./install.sh --prefix /usr
 ```
 
+### Arch / Mabox package
+
+Build and install with pacman from the included `PKGBUILD`:
+
+```bash
+cd volbar/packaging
+makepkg -si
+```
+
+Remove with `sudo pacman -R volbar`.
+
 ## Quick Start
 
 ```bash
@@ -217,6 +228,16 @@ man volbar
 # Before installing
 man ./volbar.1
 ```
+
+## Releasing
+
+1. Update `version.txt` and move the `[Unreleased]` notes in
+   `CHANGELOG.md` under the new version.
+2. Merge to `main`, then publish a GitHub release with tag `v.X.Y.Z`.
+3. In `packaging/PKGBUILD`, set `pkgver`, reset `pkgrel=1` and update
+   the checksum (`updpkgsums`), then commit.
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 

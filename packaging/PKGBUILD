@@ -1,0 +1,40 @@
+# Maintainer: Musqz <https://github.com/musqz>
+
+pkgname=volbar
+pkgver=1.3.0
+pkgrel=1
+pkgdesc="Simple X11 volume bar. Tiny footprint, highly customizable."
+arch=('any')
+url="https://github.com/musqz/volbar"
+license=('MIT')
+depends=('python' 'python-gobject' 'python-cairo' 'gtk3')
+optdepends=(
+    'wireplumber: PipeWire volume backend (wpctl)'
+    'libpulse: PulseAudio volume backend (pactl)'
+    'alsa-utils: ALSA volume backend (amixer)'
+    'pavucontrol: default mixer for the tray menu'
+)
+_tag="v.$pkgver"
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$_tag.tar.gz")
+sha256sums=('7e1dbcdb45451733e1f79150c6727bae58a8ac924654b8b855ee157d00071ae4')
+
+check() {
+    cd "$pkgname-$_tag"
+    # Catch a tag whose version.txt was not bumped
+    [[ "$(<version.txt)" == "$pkgver" ]]
+    python -m py_compile volbar
+}
+
+package() {
+    cd "$pkgname-$_tag"
+
+    install -d "$pkgdir/usr/bin" "$pkgdir/usr/share/man/man1"
+    sed "s/@@VERSION@@/$pkgver/g" volbar > "$pkgdir/usr/bin/volbar"
+    sed "s/@@VERSION@@/$pkgver/g" volbar.1 > "$pkgdir/usr/share/man/man1/volbar.1"
+    chmod 755 "$pkgdir/usr/bin/volbar"
+    chmod 644 "$pkgdir/usr/share/man/man1/volbar.1"
+
+    install -Dm644 -t "$pkgdir/usr/share/volbar/themes" themes/*.css
+    install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
