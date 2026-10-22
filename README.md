@@ -1,3 +1,6 @@
+> **This repository has moved to Codeberg: https://codeberg.org/linux-bird/volbar**
+> It is archived here. Please use Codeberg for issues and pull requests.
+
 ```
 
 ███╗   ███╗ █████╗ ██████╗  ██████╗ ██╗  ██╗
