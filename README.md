@@ -12,7 +12,7 @@
 
 Simple X11 volume bar. Tiny footprint, highly customizable.
 
-![version](https://img.shields.io/gitea/v/tag/linux-bird/volbar?gitea_url=https://codeberg.org&label=version)
+![version](https://img.shields.io/github/v/tag/musqz/volbar?label=version)
 ![license](https://img.shields.io/badge/license-free-green)
 
 <img width="230" height="62" alt="Image" src="https://github.com/user-attachments/assets/ee698170-df4e-4dac-9673-d124205c7f29" />
@@ -37,7 +37,7 @@ sudo pacman -S python-gobject gtk3
 ## Installation
 
 ```bash
-git clone https://codeberg.org/linux-bird/volbar.git
+git clone https://github.com/musqz/volbar.git
 cd volbar
 sudo ./install.sh
 ```
