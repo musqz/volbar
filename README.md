@@ -15,7 +15,7 @@ Simple X11 volume bar. Tiny footprint, highly customizable.
 ![version](https://img.shields.io/github/v/tag/musqz/volbar?label=version)
 ![license](https://img.shields.io/badge/license-free-green)
 
-<img width="230" height="62" alt="Image" src="https://github.com/user-attachments/assets/ee698170-df4e-4dac-9673-d124205c7f29" />
+![volbar preview](images/volbar-mix.gif)
 
 ## Features
 
@@ -131,8 +131,6 @@ Default 200ms works well for most setups.
 ## Themes
 
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
-
-![volbar themes](images/volbar-mix.gif)
 
 ```bash
 # List available themes
