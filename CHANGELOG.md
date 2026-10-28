@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-28
+
 ### Added
 - `--icon-style fixed|system`: `system` uses the icon theme's `audio-volume-*-symbolic` icons.
 - `CHANGELOG.md` and an Arch/Mabox `PKGBUILD` in `packaging/`.
@@ -68,7 +70,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - First tagged release.
 
-[Unreleased]: https://github.com/musqz/volbar/compare/v.1.3.0...HEAD
+[Unreleased]: https://github.com/musqz/volbar/compare/v.1.4.0...HEAD
+[1.4.0]: https://github.com/musqz/volbar/compare/v.1.3.0...v.1.4.0
 [1.3.0]: https://github.com/musqz/volbar/compare/v.1.2.0...v.1.3.0
 [1.2.0]: https://github.com/musqz/volbar/compare/v.1.1.1...v.1.2.0
 [1.1.1]: https://github.com/musqz/volbar/compare/v.1.1.0...v.1.1.1
