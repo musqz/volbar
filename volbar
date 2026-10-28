@@ -6,6 +6,8 @@ Volbar - Simple X11 volume bar. Tiny footprint, highly customizable.
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, Gio
+import cairo
+import math
 import shutil
 import subprocess
 import sys
@@ -102,10 +104,12 @@ def stop_daemon():
 # ============================================================================
 
 SIZES = {
-    'small':  {'height': 36, 'font': '10'},
-    'medium': {'height': 40, 'font': '12'},
-    'large':  {'height': 48, 'font': '16'}
+    'small':  {'height': 36, 'font': '10', 'icon': 16},
+    'medium': {'height': 40, 'font': '12', 'icon': 18},
+    'large':  {'height': 48, 'font': '16', 'icon': 22}
 }
+
+ICON_STYLES = ['fixed', 'system']
 
 PLACEMENTS = {
     'center': lambda w, h, gw, gh: ((gw - w) // 2, (gh - h) // 2),
@@ -452,16 +456,19 @@ label#percentage.muted {{
 class VolumeWindow(Gtk.Window):
     """Simple volume bar window"""
     
-    # Use emoji icons that work on most systems
-    ICONS = {'muted': '🔇', 'low': '🔈', 'medium': '🔉', 'high': '🔊'}
+    # Sound-wave arcs drawn per level by the fixed icon style
+    ICON_WAVES = {'low': 1, 'medium': 2, 'high': 3}
     
     def __init__(self, size='medium', placement='center', show_icon=True, 
-                 show_percent=True, slider='smooth', theme='default', debug=False):
+                 show_percent=True, slider='smooth', theme='default', debug=False,
+                 icon_style='fixed'):
         super().__init__()
         
         self.size_preset = SIZES[size]
         self.placement = placement
         self.show_icon_flag = show_icon
+        self.icon_style = icon_style
+        self.icon_level = 'high'
         self.show_percent_flag = show_percent
         self.slider_type = slider
         self.debug = debug
@@ -537,6 +544,8 @@ class VolumeWindow(Gtk.Window):
             self.icon_label = Gtk.Label()
             self.icon_label.set_name('icon')
             self.icon_label.set_halign(Gtk.Align.START)
+            self.icon_label.set_size_request(self.size_preset['icon'] + 12, self.size_preset['icon'])
+            self.icon_label.connect_after('draw', self.draw_icon)
             box.pack_start(self.icon_label, False, False, 0)
         
         # Slider (center, expands)
@@ -621,21 +630,72 @@ class VolumeWindow(Gtk.Window):
         
         return False
     
+    def draw_icon(self, widget, cr):
+        """Paint the volume icon in the label's CSS color"""
+        w = widget.get_allocated_width()
+        h = widget.get_allocated_height()
+        color = widget.get_style_context().get_color(widget.get_state_flags())
+        size = self.size_preset['icon']
+        
+        if self.icon_style == 'system':
+            info = Gtk.IconTheme.get_default().lookup_icon(
+                f'audio-volume-{self.icon_level}-symbolic', size,
+                Gtk.IconLookupFlags.FORCE_SIZE)
+            try:
+                pixbuf, _ = info.load_symbolic(color, None, None, None)
+            except (AttributeError, GLib.Error):
+                pixbuf = None  # theme lacks the icon: use the fixed glyph
+            if pixbuf:
+                Gdk.cairo_set_source_pixbuf(cr, pixbuf, (w - size) / 2, (h - size) / 2)
+                cr.paint()
+                return False
+        
+        # 24x24 outline-style glyph scaled to the icon size
+        scale = size / 24
+        cr.translate((w - size) / 2, (h - size) / 2)
+        cr.scale(scale, scale)
+        cr.set_source_rgba(color.red, color.green, color.blue, color.alpha)
+        cr.set_line_width(1.8)
+        cr.set_line_cap(cairo.LineCap.ROUND)
+        cr.set_line_join(cairo.LineJoin.ROUND)
+        
+        cr.move_to(2, 9.5)
+        cr.line_to(5.5, 9.5)
+        cr.line_to(10, 5.5)
+        cr.line_to(10, 18.5)
+        cr.line_to(5.5, 14.5)
+        cr.line_to(2, 14.5)
+        cr.close_path()
+        cr.fill_preserve()
+        cr.stroke()
+        
+        if self.icon_level == 'muted':
+            for x1, x2 in ((14, 20), (20, 14)):
+                cr.move_to(x1, 9)
+                cr.line_to(x2, 15)
+            cr.stroke()
+        else:
+            for n in range(self.ICON_WAVES[self.icon_level]):
+                cr.new_sub_path()
+                cr.arc(10, 12, 4 + 3.5 * n, -math.pi / 4.5, math.pi / 4.5)
+                cr.stroke()
+        return False
+    
     def update(self, volume, muted):
         """Update display"""
         font_size = self.size_preset['font']
         
         if self.show_icon_flag:
             if muted:
-                icon = self.ICONS['muted']
+                self.icon_level = 'muted'
             elif volume <= 30:
-                icon = self.ICONS['low']
+                self.icon_level = 'low'
             elif volume <= 70:
-                icon = self.ICONS['medium']
+                self.icon_level = 'medium'
             else:
-                icon = self.ICONS['high']
+                self.icon_level = 'high'
             
-            self.icon_label.set_markup(f'<span font_desc="{font_size}">{icon}</span>')
+            self.icon_label.queue_draw()
             ctx = self.icon_label.get_style_context()
             if muted:
                 ctx.add_class('muted')
@@ -759,6 +819,7 @@ def test_themes(args):
         size=args.get('size', 'large'),
         placement=args.get('placement', 'center'),
         show_icon=args.get('icon', True),
+        icon_style=args.get('icon_style', 'fixed'),
         show_percent=args.get('percent', True),
         slider=args.get('slider', 'smooth'),
         theme=themes[0],
@@ -796,6 +857,8 @@ Options:
                           top-right, bottom-left, bottom-right (default: center)
                            
   --icon on|off           Show volume icon (default: on)
+  --icon-style STYLE      fixed (drawn glyph) or system (icon theme, falls back to fixed)
+                          (default: fixed)
   --percent on|off        Show percentage (default: on)
   --slider TYPE           smooth, blocks, dots, line (default: smooth)
   --theme NAME            Theme name or 'auto' (default: default)
@@ -837,6 +900,7 @@ def parse_args():
         'size': 'medium',
         'placement': 'center',
         'icon': True,
+        'icon_style': 'fixed',
         'percent': True,
         'slider': 'smooth',
         'theme': 'default',
@@ -894,6 +958,9 @@ def parse_args():
         elif arg == '--icon' and i + 1 < len(sys.argv):
             args['icon'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
             i += 2
+        elif arg == '--icon-style' and i + 1 < len(sys.argv):
+            args['icon_style'] = sys.argv[i + 1].lower()
+            i += 2
         elif arg == '--percent' and i + 1 < len(sys.argv):
             args['percent'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
             i += 2
@@ -926,9 +993,10 @@ def parse_args():
             sys.exit(1)
     
     for key, choices in (('size', SIZES), ('placement', PLACEMENTS),
-                         ('slider', ['smooth', *SLIDERS])):
+                         ('slider', ['smooth', *SLIDERS]),
+                         ('icon_style', ICON_STYLES)):
         if args[key] not in choices:
-            print(f"✗ Invalid --{key} '{args[key]}' (choose from: {', '.join(choices)})")
+            print(f"✗ Invalid --{key.replace('_', '-')} '{args[key]}' (choose from: {', '.join(choices)})")
             sys.exit(1)
     
     return args
@@ -950,6 +1018,7 @@ def show_once(args):
         size=args['size'],
         placement=args['placement'],
         show_icon=args['icon'],
+        icon_style=args['icon_style'],
         show_percent=args['percent'],
         slider=args['slider'],
         theme=args['theme'],
@@ -1103,6 +1172,7 @@ def run_daemon(args):
         size=args['size'],
         placement=args['placement'],
         show_icon=args['icon'],
+        icon_style=args['icon_style'],
         show_percent=args['percent'],
         slider=args['slider'],
         theme=args['theme'],
