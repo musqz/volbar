@@ -131,7 +131,7 @@ Default 200ms works well for most setups.
 
 **Included:** default, catppuccin, cyberpunk, dracula, gruvbox, neon-green, nord, solarized-dark, tokyo-night, vibrant-blue, vibrant-brown, vibrant-green, vibrant-orange
 
-![volbar themes](images/volbar-themes.gif)
+![volbar themes](images/volbar-mix.gif)
 
 ```bash
 # List available themes
