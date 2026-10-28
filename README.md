@@ -86,7 +86,7 @@ volbar --stop-daemon
 |--------|--------|---------|-------------|
 | `--size` | small, medium, large | medium | Window size |
 | `--placement` | center, top, bottom, left, right, top-left, top-right, bottom-left, bottom-right | center | Screen position |
-| `--slider` | smooth, blocks, dots, line | smooth | Slider style |
+| `--slider` | smooth, blocks, dots | smooth | Slider style |
 | `--theme` | theme name or `auto` | default | CSS theme |
 | `--timeout` | milliseconds | 2000 | Display duration |
 | `--poll-interval` | milliseconds | 200 | Daemon check interval |
@@ -103,7 +103,6 @@ character styles render the level with text glyphs:
 smooth   ▰▰▰▰▰▱▱▱▱▱  (continuous filled bar)
 blocks   █████░░░░░
 dots     ●●●●●○○○○○
-line     ━━━━━─────
 ```
 
 ### System Tray

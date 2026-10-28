@@ -6,6 +6,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+- `--slider line`: now rejected as invalid; use `blocks` or `dots`.
+
 ## [1.4.0] - 2026-10-28
 
 ### Added

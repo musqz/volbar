@@ -25,7 +25,7 @@ fixed (drawn glyph) or system (icon theme, falls back to fixed) (default: fixed)
 Show percentage (default: on)
 .TP
 .BR \-\-slider " \fITYPE\fR"
-Slider style: smooth, blocks, dots, line (default: smooth)
+Slider style: smooth, blocks, dots (default: smooth)
 .TP
 .BR \-\-theme " \fINAME\fR"
 Theme name from ~/.config/volbar/themes/, or 'auto' for Mabox conky wallpaper colors (default: default)
@@ -84,9 +84,6 @@ Continuous filled bar, styled via CSS (default)
 .TP
 .B dots
 ●●●●●○○○○○
-.TP
-.B line
-━━━━━─────
 .SH THEMES
 Themes are CSS files in ~/.config/volbar/themes/, /usr/local/share/volbar/themes/ or /usr/share/volbar/themes/.
 .PP
@@ -128,8 +125,8 @@ Show volume bar once
 .B volbar \-\-show \-\-theme auto
 Use Mabox conky wallpaper colors
 .TP
-.B volbar \-\-show \-\-slider line \-\-placement top
-Line slider at top
+.B volbar \-\-show \-\-slider dots \-\-placement top
+Dots slider at top
 .TP
 .B volbar \-\-start\-daemon \-\-theme auto
 Daemon with wallpaper colors
