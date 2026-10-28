@@ -6,6 +6,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `--rounded`: keep the theme's rounded corners without picom's `corner-radius`.
+
 ### Removed
 - `--slider line`: now rejected as invalid; use `blocks` or `dots`.
 

@@ -93,6 +93,7 @@ volbar --stop-daemon
 | `--icon` | on, off | on | Show volume icon |
 | `--icon-style` | fixed, system | fixed | Drawn glyph or icon-theme icon (falls back to fixed) |
 | `--percent` | on, off | on | Show percentage |
+| `--rounded` | flag | off | Keep the theme's rounded corners (needs a compositor; default leaves rounding to picom) |
 
 ### Slider Styles
 
