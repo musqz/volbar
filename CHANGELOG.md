@@ -6,6 +6,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `--rounded`: keep the theme's rounded corners without picom's `corner-radius`.
+
 ## [1.4.0] - 2026-10-28
 
 ### Added
