@@ -145,7 +145,6 @@ def find_themes():
 SLIDERS = {
     'blocks': lambda n: '█' * n + '░' * (10 - n),
     'dots':   lambda n: '●' * n + '○' * (10 - n),
-    'line':   lambda n: '━' * n + '─' * (10 - n),
 }
 
 
@@ -556,7 +555,7 @@ class VolumeWindow(Gtk.Window):
         
         # Slider (center, expands)
         # 'smooth' uses a native LevelBar (continuous, CSS-styled);
-        # the legacy character styles (blocks/dots/line) use a Label.
+        # the legacy character styles (blocks/dots) use a Label.
         if self.slider_type == 'smooth':
             self.slider_widget = Gtk.LevelBar()
             self.slider_widget.set_name('slider')
@@ -765,7 +764,7 @@ def list_sliders():
         print(f"  {name:<15} {slider}")
 
     print(f"\nUsage: volbar --show --slider SLIDER_NAME")
-    print(f"Example: volbar --show --slider line")
+    print(f"Example: volbar --show --slider dots")
 
 
 def list_themes():
@@ -867,7 +866,7 @@ Options:
                           (default: fixed)
   --percent on|off        Show percentage (default: on)
   --rounded               Keep the theme's rounded corners (default: picom rounds them)
-  --slider TYPE           smooth, blocks, dots, line (default: smooth)
+  --slider TYPE           smooth, blocks, dots (default: smooth)
   --theme NAME            Theme name or 'auto' (default: default)
                           (auto uses Mabox conky wallpaper colors)
   --timeout MS            Display timeout in milliseconds (default: 2000)
@@ -893,7 +892,7 @@ Examples:
   volbar --show --theme auto          # Mabox conky wallpaper colors
   volbar --list-themes
   volbar --list-sliders
-  volbar --show --slider line
+  volbar --show --slider dots
   volbar --start-daemon --placement top-right --theme auto
   volbar --stop-daemon
 
