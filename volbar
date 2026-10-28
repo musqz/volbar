@@ -251,9 +251,6 @@ class ThemeLoader:
 
     CONKY_PATH = Path.home() / '.config' / 'conky' / 'sysinfo_mbcolor.conkyrc'
 
-    # --rounded: keep the theme's window/container border-radius
-    rounded = False
-
     DEFAULT_CSS = """
 /* Volbar Default Theme */
 
@@ -402,12 +399,9 @@ label#percentage.muted {{
     @staticmethod
     def strip_border_radius(css):
         """Remove window/container border-radius so picom handles corners.
-        Does nothing with --rounded.
 
         The smooth slider's own rounding (levelbar rules) is kept.
         """
-        if ThemeLoader.rounded:
-            return css
         def strip_rule(match):
             selector, body = match.group(1), match.group(2)
             if 'levelbar' in selector:
@@ -865,7 +859,6 @@ Options:
   --icon-style STYLE      fixed (drawn glyph) or system (icon theme, falls back to fixed)
                           (default: fixed)
   --percent on|off        Show percentage (default: on)
-  --rounded               Keep the theme's rounded corners (default: picom rounds them)
   --slider TYPE           smooth, blocks, dots (default: smooth)
   --theme NAME            Theme name or 'auto' (default: default)
                           (auto uses Mabox conky wallpaper colors)
@@ -902,8 +895,6 @@ Note: Corner rounding should be configured via picom compositor settings.
 
 def parse_args():
     """Parse command line arguments"""
-    # Before the loop: --test-themes runs mid-parse
-    ThemeLoader.rounded = '--rounded' in sys.argv
     args = {
         'size': 'medium',
         'placement': 'center',
@@ -966,8 +957,6 @@ def parse_args():
         elif arg == '--icon' and i + 1 < len(sys.argv):
             args['icon'] = sys.argv[i + 1].lower() in ['on', 'true', 'yes']
             i += 2
-        elif arg == '--rounded':
-            i += 1
         elif arg == '--icon-style' and i + 1 < len(sys.argv):
             args['icon_style'] = sys.argv[i + 1].lower()
             i += 2
