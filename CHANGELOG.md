@@ -7,11 +7,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `--icon-style fixed|system`: `system` uses the icon theme's `audio-volume-*-symbolic` icons.
 - `CHANGELOG.md` and an Arch/Mabox `PKGBUILD` in `packaging/`.
 - `./install.sh --uninstall` (honours `--prefix`): stops a running daemon
   and removes the script, man page and system themes. Refuses when volbar
   was installed by pacman.
 - `./install.sh --help`.
+
+### Changed
+- The fixed volume icon is a drawn speaker glyph (recolored by `label#icon`) instead of emoji.
 
 ### Fixed
 - `install.sh` argument parsing: `--prefix DIR` works in any position,

@@ -91,6 +91,7 @@ volbar --stop-daemon
 | `--timeout` | milliseconds | 2000 | Display duration |
 | `--poll-interval` | milliseconds | 200 | Daemon check interval |
 | `--icon` | on, off | on | Show volume icon |
+| `--icon-style` | fixed, system | fixed | Drawn glyph or icon-theme icon (falls back to fixed) |
 | `--percent` | on, off | on | Show percentage |
 
 ### Slider Styles
