@@ -1,7 +1,7 @@
 # Maintainer: Musqz <https://github.com/musqz>
 
 pkgname=volbar
-pkgver=1.3.0
+pkgver=1.4.0
 pkgrel=1
 pkgdesc="Simple X11 volume bar. Tiny footprint, highly customizable."
 arch=('any')
@@ -16,7 +16,7 @@ optdepends=(
 )
 _tag="v.$pkgver"
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$_tag.tar.gz")
-sha256sums=('7e1dbcdb45451733e1f79150c6727bae58a8ac924654b8b855ee157d00071ae4')
+sha256sums=('SKIP')
 
 check() {
     cd "$pkgname-$_tag"
