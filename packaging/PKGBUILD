@@ -16,7 +16,7 @@ optdepends=(
 )
 _tag="v.$pkgver"
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$_tag.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('6cf6028127c3c96fa34789a4e7a9d150a7d20d18e6f554d759df7747133731a5')
 
 check() {
     cd "$pkgname-$_tag"
